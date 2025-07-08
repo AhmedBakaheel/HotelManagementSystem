@@ -1,0 +1,69 @@
+﻿@model HotelManagementSystem.ViewModel.BookRoomViewModel
+
+@{
+    ViewData["Title"] = "تأكيد الحجز";
+}
+
+<h1>تأكيد حجز الغرفة</h1>
+
+<div class="card p-4 shadow-sm">
+    <h4 class="card-title">تفاصيل الحجز</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-4">رقم الغرفة:</dt>
+        <dd class="col-sm-8">@Model.RoomNumber</dd>
+
+        <dt class="col-sm-4">نوع الغرفة:</dt>
+        <dd class="col-sm-8">@Model.RoomType.GetDisplayName()</dd>
+
+        <dt class="col-sm-4">الوصف:</dt>
+        <dd class="col-sm-8">@Model.Description</dd>
+
+        <dt class="col-sm-4">السعر لليلة:</dt>
+        <dd class="col-sm-8">@Model.PricePerNight.ToString("C")</dd>
+
+        <dt class="col-sm-4">تاريخ الدخول:</dt>
+        <dd class="col-sm-8">@Model.CheckInDate.ToShortDateString()</dd>
+
+        <dt class="col-sm-4">تاريخ المغادرة:</dt>
+        <dd class="col-sm-8">@Model.CheckOutDate.ToShortDateString()</dd>
+
+        <dt class="col-sm-4">عدد الليالي:</dt>
+        <dd class="col-sm-8">@Model.NumberOfNights</dd>
+
+        <dt class="col-sm-4">الإجمالي:</dt>
+        <dd class="col-sm-8"><strong>@Model.TotalPrice.ToString("C")</strong></dd>
+    </dl>
+
+    <form asp-action="ConfirmBooking" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <input type="hidden" asp-for="RoomId" />
+        <input type="hidden" asp-for="CheckInDate" />
+        <input type="hidden" asp-for="CheckOutDate" />
+        <input type="hidden" asp-for="RoomNumber" />
+        <input type="hidden" asp-for="RoomType" />
+        <input type="hidden" asp-for="PricePerNight" />
+        <input type="hidden" asp-for="Description" />
+
+
+        <div class="form-group mt-3">
+            @if (User.Identity.IsAuthenticated)
+            {
+                <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> تأكيد الحجز</button>
+            }
+            else
+            {
+                <div class="alert alert-warning" role="alert">
+                    لإكمال الحجز، يرجى <a asp-area="Identity" asp-page="/Account/Login">تسجيل الدخول</a> أو <a asp-area="Identity" asp-page="/Account/Register">إنشاء حساب</a>.
+                </div>
+            }
+            <a asp-action="Search" class="btn btn-secondary">إلغاء والعودة للبحث</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

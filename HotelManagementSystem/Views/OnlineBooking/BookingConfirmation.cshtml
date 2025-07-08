@@ -1,0 +1,42 @@
+﻿@model HotelManagementSystem.Models.Booking
+
+@{
+    ViewData["Title"] = "تأكيد الحجز";
+}
+
+<div class="container text-center">
+    <div class="alert alert-success mt-5" role="alert">
+        <h4 class="alert-heading">تم تأكيد حجزك بنجاح!</h4>
+        <p>شكراً لك على حجزك معنا. لقد تم تأكيد حجزك بنجاح.</p>
+        <hr>
+        <p class="mb-0">رقم الحجز الخاص بك هو: <strong>#@Model.Id</strong></p>
+    </div>
+
+    <div class="card p-4 shadow-sm mt-4">
+        <h5 class="card-title">تفاصيل الحجز</h5>
+        <dl class="row text-start">
+            <dt class="col-sm-4">رقم الحجز:</dt>
+            <dd class="col-sm-8">@Model.Id</dd>
+
+            <dt class="col-sm-4">الغرفة:</dt>
+            <dd class="col-sm-8">@Model.Room?.RoomNumber (@Model.Room?.RoomType.GetDisplayName())</dd>
+
+            <dt class="col-sm-4">تاريخ الدخول:</dt>
+            <dd class="col-sm-8">@Model.CheckInDate.ToShortDateString()</dd>
+
+            <dt class="col-sm-4">تاريخ المغادرة:</dt>
+            <dd class="col-sm-8">@Model.CheckOutDate.ToShortDateString()</dd>
+
+            <dt class="col-sm-4">الحالة:</dt>
+            <dd class="col-sm-8">@Model.Status.GetDisplayName()</dd>
+
+            <dt class="col-sm-4">اسم العميل:</dt>
+            <dd class="col-sm-8">@(Model.ApplicationUser?.FirstName ?? Model.Customer?.FirstName) @(Model.ApplicationUser?.LastName ?? Model.Customer?.LastName)</dd>
+
+            <dt class="col-sm-4">البريد الإلكتروني للعميل:</dt>
+            <dd class="col-sm-8">@(Model.ApplicationUser?.Email ?? Model.Customer?.Email)</dd>
+        </dl>
+        <a asp-action="Search" class="btn btn-primary mt-3">العودة للبحث عن الغرف</a>
+        <a asp-controller="MyAccount" asp-action="Index" class="btn btn-info mt-2">عرض حجوزاتي</a>
+    </div>
+</div>

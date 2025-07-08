@@ -1,0 +1,29 @@
+﻿@model IEnumerable<Microsoft.AspNetCore.Identity.IdentityUser>
+
+@{
+    ViewData["Title"] = "إدارة المستخدمين والأدوار";
+}
+
+<h1>إدارة المستخدمين والأدوار</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>البريد الإلكتروني / اسم المستخدم</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>
+                    @user.Email
+                </td>
+                <td>
+                    <a asp-action="ManageUserRoles" asp-route-userId="@user.Id" class="btn btn-primary btn-sm">إدارة الأدوار</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

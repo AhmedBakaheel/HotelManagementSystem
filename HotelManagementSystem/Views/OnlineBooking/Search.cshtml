@@ -1,0 +1,83 @@
+﻿@model HotelManagementSystem.ViewModels.RoomSearchViewModel
+@using HotelManagementSystem.Enums
+@using HotelManagementSystem.Models
+
+@{
+    ViewData["Title"] = "البحث عن الغرف";
+}
+
+<h1>البحث عن الغرف المتاحة</h1>
+
+<div class="card p-4 shadow-sm mb-4">
+    <form asp-action="Search" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group mb-3">
+                    <label asp-for="CheckInDate" class="control-label"></label>
+                    <input asp-for="CheckInDate" type="date" class="form-control" />
+                    <span asp-validation-for="CheckInDate" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group mb-3">
+                    <label asp-for="CheckOutDate" class="control-label"></label>
+                    <input asp-for="CheckOutDate" type="date" class="form-control" />
+                    <span asp-validation-for="CheckOutDate" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group mb-3">
+                    <label asp-for="RoomType" class="control-label"></label>
+                    <select asp-for="RoomType" class="form-control" asp-items="Html.GetEnumSelectList<RoomType>()">
+                        <option value="">كل الأنواع</option>
+                    </select>
+                    <span asp-validation-for="RoomType" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> بحث</button>
+        </div>
+    </form>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Message))
+{
+    <div class="alert alert-info">@Model.Message</div>
+}
+
+@if (Model.AvailableRooms != null && Model.AvailableRooms.Any())
+{
+    <h2>الغرف المتاحة</h2>
+    <div class="row">
+        @foreach (var room in Model.AvailableRooms)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">غرفة رقم: @room.RoomNumber</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">النوع: @room.RoomType.GetDisplayName()</h6>
+                        <p class="card-text">
+                            @room.Description <br />
+                            السعر لليلة: **@room.PricePerNight.ToString("C")**
+                        </p>
+                        <a asp-action="Book"
+                           asp-route-id="@room.Id"
+                           asp-route-checkInDate="@Model.CheckInDate.ToString("yyyy-MM-dd")"
+                           asp-route-checkOutDate="@Model.CheckOutDate.ToString("yyyy-MM-dd")"
+                           class="btn btn-success">
+                            احجز هذه الغرفة
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

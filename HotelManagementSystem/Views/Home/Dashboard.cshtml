@@ -1,0 +1,76 @@
+﻿@using HotelManagementSystem.Models // لاستخدام BookingStatus
+@{
+    ViewData["Title"] = "لوحة التحكم";
+    var activeBookings = ViewBag.ActiveBookings as List<Booking>; // لاستقبال قائمة الحجوزات
+}
+
+<h1>لوحة التحكم</h1>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">إجمالي الغرف</h5>
+                <p class="card-text fs-1">@ViewBag.TotalRooms</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">الغرف المتاحة حالياً</h5>
+                <p class="card-text fs-1">@ViewBag.AvailableRooms</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">إجمالي العملاء</h5>
+                <p class="card-text fs-1">@ViewBag.TotalCustomers</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <h2>الحجوزات النشطة / القادمة</h2>
+        @if (activeBookings != null && activeBookings.Any())
+        {
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>رقم الغرفة</th>
+                        <th>العميل</th>
+                        <th>تاريخ الدخول</th>
+                        <th>تاريخ المغادرة</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var booking in activeBookings)
+                    {
+                        <tr>
+                            <td>@booking.Room?.RoomNumber</td>
+                            <td>@booking.Customer?.FirstName @booking.Customer?.LastName</td>
+                            <td>@booking.CheckInDate.ToShortDateString()</td>
+                            <td>@booking.CheckOutDate.ToShortDateString()</td>
+                            <td>@booking.Status</td>
+                            <td>
+                                <a asp-controller="Bookings" asp-action="Details" asp-route-id="@booking.Id" class="btn btn-sm btn-outline-info">تفاصيل</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="alert alert-info" role="alert">
+                لا توجد حجوزات نشطة أو قادمة حالياً.
+            </div>
+        }
+    </div>
+</div>
