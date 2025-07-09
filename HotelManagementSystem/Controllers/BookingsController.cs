@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace HotelManagementSystem.Controllers
 {
-    [Authorize(Roles = "Customer")]
+    [Authorize(Roles = "Receptionist,Customer")]
     public class BookingsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -57,8 +57,8 @@ namespace HotelManagementSystem.Controllers
             }
 
             var booking = await _context.Bookings
-                .Include(b => b.Room) // Include related Room data
-                .Include(b => b.Customer) // Include related Customer data
+                .Include(b => b.Room) 
+                .Include(b => b.Customer)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (booking == null)
             {
@@ -71,8 +71,8 @@ namespace HotelManagementSystem.Controllers
         // GET: Bookings/Create
         public IActionResult Create()
         {
-            ViewData["RoomId"] = new SelectList(_context.Rooms.Where(r => r.IsAvailable), "Id", "RoomNumber");
-            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "Email"); // أو "FullName" إذا أضفتها لنموذج العميل
+            ViewData["RoomId"] = new SelectList(_context.Rooms.Where(r => r.Status == RoomStatus.Available), "Id", "RoomNumber");
+            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "Email"); 
             return View();
         }
 
@@ -81,11 +81,11 @@ namespace HotelManagementSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,RoomId,CustomerId,CheckInDate,CheckOutDate,TotalAmount,Status")] Booking booking)
         {
-            // Set BookingDate automatically
+            // 1. تعيين التواريخ والحالة الأولية
             booking.BookingDate = DateTime.Now;
-            booking.Status = BookingStatus.Pending; // Initial status
+            booking.Status = BookingStatus.Pending; // الحالة الأولية للحجز
 
-            // Ensure CheckInDate is not in the past and CheckOutDate is after CheckInDate
+            // 2. التحقق من صحة تواريخ الدخول والخروج (كما كان لديك)
             if (booking.CheckInDate < DateTime.Today)
             {
                 ModelState.AddModelError("CheckInDate", "تاريخ الدخول لا يمكن أن يكون في الماضي.");
@@ -95,7 +95,38 @@ namespace HotelManagementSystem.Controllers
                 ModelState.AddModelError("CheckOutDate", "تاريخ المغادرة يجب أن يكون بعد تاريخ الدخول.");
             }
 
-            // Custom validation: Check room availability for the specified dates
+            // 3. ربط الحجز بالمستخدم المسجل دخوله
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                // إذا لم يكن هناك مستخدم مسجل دخوله (وهذا لا ينبغي أن يحدث إذا كانت الصفحة محمية بـ [Authorize])
+                // يمكنك إعادة التوجيه لصفحة تسجيل الدخول أو إرجاع خطأ.
+                ModelState.AddModelError("", "يجب تسجيل الدخول لإتمام عملية الحجز.");
+            }
+            else
+            {
+                booking.ApplicationUserId = currentUser.Id; // ربط الحجز بمعرف المستخدم
+
+                // 4. ربط الحجز بالعميل:
+                // ابحث عن عميل موجود ببريد المستخدم، أو أنشئ عميل جديد إذا لم يكن موجوداً.
+                var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email == currentUser.Email);
+                if (customer == null)
+                {
+                    // إنشاء عميل جديد إذا لم يتم العثور عليه
+                    customer = new Customer
+                    {
+                        FirstName = currentUser.FirstName ?? "غير معروف", // استخدم بيانات المستخدم
+                        LastName = currentUser.LastName ?? "غير معروف",
+                        Email = currentUser.Email,
+                        PhoneNumber = currentUser.PhoneNumber // يمكن أن يكون null
+                    };
+                    _context.Customers.Add(customer);
+                    await _context.SaveChangesAsync(); // حفظ العميل للحصول على CustomerId
+                }
+                booking.CustomerId = customer.Id; // ربط الحجز بمعرف العميل
+            }
+
+            // 5. التحقق من توفر الغرفة (منطقك المخصص)
             var room = await _context.Rooms.FindAsync(booking.RoomId);
             if (room == null)
             {
@@ -103,42 +134,49 @@ namespace HotelManagementSystem.Controllers
             }
             else
             {
-                // Check for overlapping bookings for the same room
+                // التحقق من الحجوزات المتداخلة (منطقك الذي كان لديك)
                 var existingBookings = await _context.Bookings
                     .Where(b => b.RoomId == booking.RoomId &&
-                                b.Status != BookingStatus.Cancelled &&
-                                ((booking.CheckInDate < b.CheckOutDate && booking.CheckOutDate > b.CheckInDate) ||
-                                 (booking.CheckInDate == b.CheckInDate && booking.CheckOutDate == b.CheckOutDate)))
+                                b.Status != BookingStatus.Cancelled && // استبعد الحجوزات الملغاة
+                                ((booking.CheckInDate < b.CheckOutDate && booking.CheckOutDate > b.CheckInDate) || // تداخل الفترات
+                                 (booking.CheckInDate == b.CheckInDate && booking.CheckOutDate == b.CheckOutDate))) // نفس التواريخ
                     .ToListAsync();
 
                 if (existingBookings.Any())
                 {
                     ModelState.AddModelError("RoomId", "هذه الغرفة محجوزة بالفعل في التواريخ المحددة.");
-                    room.IsAvailable = false; // Optionally mark as unavailable if conflicting booking found
-                }
-                else
-                {
-                    room.IsAvailable = true; // Mark as available if no conflict (important for a new booking if the room was marked unavailable)
                 }
             }
 
+
+            // 6. التحقق من صحة النموذج بالكامل قبل الحفظ
             if (ModelState.IsValid)
             {
-                // Update room availability status
-                if (room != null)
+                // تحديث حالة الغرفة بعد التأكد من صحة كل شيء
+                if (room != null) // تأكد أن الغرفة ليست null قبل التحديث
                 {
-                    room.IsAvailable = false; // Mark room as unavailable after a successful booking
-                    _context.Update(room);
+                    room.Status = RoomStatus.Booked; // أو RoomStatus.Unavailable، حسب تعريفك
+                    _context.Update(room); // تحديث حالة الغرفة في الـ DB
                 }
 
-                _context.Add(booking);
-                await _context.SaveChangesAsync();
+                _context.Add(booking); // إضافة الحجز الجديد
+                await _context.SaveChangesAsync(); // حفظ التغييرات
+
+                // العودة إلى صفحة Index (أو صفحة تأكيد الحجز)
                 return RedirectToAction(nameof(Index));
             }
 
-            // If ModelState is not valid, re-populate SelectLists
-            ViewData["RoomId"] = new SelectList(_context.Rooms.Where(r => r.IsAvailable), "Id", "RoomNumber", booking.RoomId);
-            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "Email", booking.CustomerId);
+            // 7. إذا كان النموذج غير صالح، أعد تهيئة الـ SelectLists وأعد الـ View
+            // تأكد من جلب الغرف المتاحة فقط للقائمة المنسدلة
+            ViewData["RoomId"] = new SelectList(
+                await _context.Rooms
+                              .Where(r => r.Status == RoomStatus.Available || r.Id == booking.RoomId) // أظهر الغرفة المختارة حتى لو لم تكن متاحة الآن
+                              .ToListAsync(),
+                "Id",
+                "RoomNumber",
+                booking.RoomId);
+
+            ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "Email", booking.CustomerId); // يمكنك تغيير "Email" إلى "FullName" إذا كان لديك هذه الخاصية
             return View(booking);
         }
 
@@ -170,7 +208,7 @@ namespace HotelManagementSystem.Controllers
                 return NotFound();
             }
 
-            // Add validation similar to Create action for dates and room availability
+           
             if (booking.CheckInDate < DateTime.Today)
             {
                 ModelState.AddModelError("CheckInDate", "تاريخ الدخول لا يمكن أن يكون في الماضي.");
@@ -199,18 +237,16 @@ namespace HotelManagementSystem.Controllers
                 if (existingBookings.Any())
                 {
                     ModelState.AddModelError("RoomId", "هذه الغرفة محجوزة بالفعل في التواريخ المحددة.");
-                    room.IsAvailable = false; // Temporarily mark as unavailable for validation feedback
+                    room.Status = RoomStatus.Booked; // Temporarily mark as unavailable for validation feedback
                 }
                 else
                 {
-                    // If the booking is confirmed/pending, mark the room as unavailable.
-                    // If it's cancelled/completed, ensure room is marked as available if no other bookings conflict.
+                   
                     if (booking.Status == BookingStatus.Confirmed || booking.Status == BookingStatus.Pending)
                     {
-                        room.IsAvailable = false;
+                        room.Status = RoomStatus.Booked;
                     }
-                    // A more robust solution would involve checking if the room is available for other bookings as well
-                    // For simplicity, we'll keep it straightforward here.
+                   
                 }
             }
 
@@ -219,7 +255,7 @@ namespace HotelManagementSystem.Controllers
             {
                 try
                 {
-                    // Handle Room availability based on Booking Status
+                    
                     if (room != null)
                     {
                         if (booking.Status == BookingStatus.Cancelled || booking.Status == BookingStatus.Completed)
@@ -231,12 +267,12 @@ namespace HotelManagementSystem.Controllers
                                                (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending));
                             if (!activeBookingsForRoom)
                             {
-                                room.IsAvailable = true; // Make room available if no other active bookings
+                                room.Status = RoomStatus.Available;
                             }
                         }
                         else // Confirmed or Pending
                         {
-                            room.IsAvailable = false; // Mark room as unavailable
+                            room.Status = RoomStatus.Booked; // Mark room as unavailable
                         }
                         _context.Update(room);
                     }
@@ -306,7 +342,7 @@ namespace HotelManagementSystem.Controllers
                                        (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Pending));
                     if (!activeBookingsForRoom)
                     {
-                        room.IsAvailable = true; // Make room available if no other active bookings
+                        room.Status = RoomStatus.Available; // Make room available if no other active bookings
                         _context.Update(room);
                     }
                 }

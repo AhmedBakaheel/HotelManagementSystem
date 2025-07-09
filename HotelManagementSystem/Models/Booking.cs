@@ -27,27 +27,27 @@ namespace HotelManagementSystem.Models
         public decimal TotalAmount { get; set; }
 
         [Display(Name = "تاريخ الحجز")]
-        public DateTime BookingDate { get; set; } = DateTime.Now; // القيمة الافتراضية هي الوقت الحالي
+        public DateTime BookingDate { get; set; } = DateTime.Now; 
 
         [Display(Name = "حالة الحجز")]
-        public BookingStatus Status { get; set; } = BookingStatus.Pending; // القيمة الافتراضية هي معلق
+        public BookingStatus Status { get; set; } = BookingStatus.Pending;
 
         // مفتاح خارجي للغرفة
         [Required(ErrorMessage = "يجب تحديد الغرفة.")]
         [Display(Name = "الغرفة")]
         public int RoomId { get; set; }
-        [ForeignKey("RoomId")] // يحدد أن RoomId هو مفتاح خارجي لجدول Rooms
-        public Room? Room { get; set; } // خاصية التنقل للغرفة
+        [ForeignKey("RoomId")] 
+        public Room? Room { get; set; } 
 
         // مفتاح خارجي للعميل
         [Required(ErrorMessage = "يجب تحديد العميل.")]
         [Display(Name = "العميل")]
         public int CustomerId { get; set; }
-        [ForeignKey("CustomerId")] // يحدد أن CustomerId هو مفتاح خارجي لجدول Customers
-        public Customer? Customer { get; set; } // خاصية التنقل للعميل
-        public string? ApplicationUserId { get; set; } // يجب أن يكون من نوع string
+        [ForeignKey("CustomerId")]
+        public Customer? Customer { get; set; }
+        public string? ApplicationUserId { get; set; } 
         [ForeignKey("ApplicationUserId")]
-        public ApplicationUser? ApplicationUser { get; set; } // خاصية تنقلية
+        public ApplicationUser? ApplicationUser { get; set; } 
 
     }
 }

@@ -32,7 +32,7 @@ namespace HotelManagementSystem.Controllers
             return View(viewModel);
         }
 
-        // POST: /OnlineBooking/Search - لمعالجة طلب البحث عن الغرف
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Search(RoomSearchViewModel viewModel)
@@ -42,23 +42,18 @@ namespace HotelManagementSystem.Controllers
                 if (viewModel.CheckInDate >= viewModel.CheckOutDate)
                 {
                     ModelState.AddModelError(string.Empty, "تاريخ المغادرة يجب أن يكون بعد تاريخ الدخول.");
-                    viewModel.AvailableRooms = new List<Room>(); // مسح قائمة الغرف إذا كان هناك خطأ
+                    viewModel.AvailableRooms = new List<Room>(); 
                     return View(viewModel);
                 }
 
-                // البحث عن الغرف المتاحة في الفترة المحددة
-                // غرفة تعتبر متاحة إذا لم تكن هناك أي حجوزات متداخلة مع التواريخ المطلوبة
-                // و Room.IsAvailable == true (للسماح بالإدارة اليدوية من قبل الإدارة)
-
                 var availableRooms = await _context.Rooms
-                    .Where(r => r.IsAvailable && // الغرفة معلمة كمتاحة من قبل الإدارة
-                        (viewModel.RoomType == null || r.RoomType == viewModel.RoomType) && // فلترة حسب النوع إذا تم تحديده
-                                                                                            // تحقق من عدم وجود تداخل مع الحجوزات الموجودة
+                    .Where(r => r.Status == RoomStatus.Available && 
+                        (viewModel.RoomType == null || r.RoomType == viewModel.RoomType) &&                                                                                            
                         !_context.Bookings.Any(b =>
                             b.RoomId == r.Id &&
-                            b.Status != BookingStatus.Cancelled && // لا تأخذ الحجوزات الملغاة بعين الاعتبار
+                            b.Status != BookingStatus.Cancelled && 
                             (
-                                (viewModel.CheckInDate < b.CheckOutDate && viewModel.CheckOutDate > b.CheckInDate) // تداخل التواريخ
+                                (viewModel.CheckInDate < b.CheckOutDate && viewModel.CheckOutDate > b.CheckInDate) 
                             )
                         ))
                     .ToListAsync();
@@ -83,7 +78,7 @@ namespace HotelManagementSystem.Controllers
         public async Task<IActionResult> Book(int id, DateTime checkInDate, DateTime checkOutDate)
         {
             var room = await _context.Rooms.FindAsync(id);
-            if (room == null || !room.IsAvailable)
+            if (room == null || room.Status != RoomStatus.Available)
             {
                 TempData["Message"] = "الغرفة غير موجودة أو غير متاحة للحجز.";
                 return RedirectToAction(nameof(Search));
@@ -136,7 +131,7 @@ namespace HotelManagementSystem.Controllers
             }
 
             var room = await _context.Rooms.FindAsync(viewModel.RoomId);
-            if (room == null || !room.IsAvailable)
+            if (room == null || room.Status != RoomStatus.Available)
             {
                 TempData["Message"] = "الغرفة غير موجودة أو غير متاحة.";
                 return RedirectToAction(nameof(Search));
@@ -188,7 +183,7 @@ namespace HotelManagementSystem.Controllers
             };
 
             _context.Add(booking);
-            room.IsAvailable = false; // تعيين الغرفة كغير متاحة بعد الحجز (يمكن تعديل هذا المنطق لاحقاً ليعتمد على حالة الحجز Confirmed)
+            room.Status = RoomStatus.Booked; // تعيين الغرفة كغير متاحة بعد الحجز (يمكن تعديل هذا المنطق لاحقاً ليعتمد على حالة الحجز Confirmed)
 
             await _context.SaveChangesAsync();
 

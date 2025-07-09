@@ -28,12 +28,12 @@ public class HomeController : Controller
         return View();
     }
     // GET: /Home/Dashboard
-    [Authorize(Roles = "Admin,Receptionist")] 
+    [Authorize(Roles = "Admin,Receptionist,Customer")] 
     public async Task<IActionResult> Dashboard()
     {
         
         var totalRooms = await _context.Rooms.CountAsync();
-        var availableRooms = await _context.Rooms.Where(r => r.IsAvailable).CountAsync();
+        var availableRooms = await _context.Rooms.Where(r => r.Status == RoomStatus.Available).CountAsync();
         var totalCustomers = await _context.Customers.CountAsync();
 
        

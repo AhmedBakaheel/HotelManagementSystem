@@ -58,7 +58,7 @@ namespace HotelManagementSystem.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken] 
-        public async Task<IActionResult> Create([Bind("Id,RoomNumber,RoomType,PricePerNight,IsAvailable,Description")] Room room)
+        public async Task<IActionResult> Create( Room room)
         {
             if (ModelState.IsValid)
             {

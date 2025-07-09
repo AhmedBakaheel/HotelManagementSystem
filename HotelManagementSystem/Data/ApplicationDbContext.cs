@@ -34,7 +34,7 @@ namespace HotelManagementSystem.Data
             builder.Entity<IdentityUserClaim<string>>().ToTable("UserClaims");
             builder.Entity<IdentityUserLogin<string>>().ToTable("UserLogins");
             builder.Entity<IdentityUserRole<string>>().ToTable("UserRoles");
-            builder.Entity<IdentityUser>().ToTable("Users");
+            builder.Entity<ApplicationUser>().ToTable("Users");
             builder.Entity<IdentityUserToken<string>>().ToTable("UserTokens");
         }
 
