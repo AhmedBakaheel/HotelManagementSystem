@@ -22,16 +22,16 @@
                 @Html.DisplayNameFor(model => model.DueDate)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.TotalAmount) 
+                @Html.DisplayNameFor(model => model.TotalAmount)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.PaidAmount) 
+                @Html.DisplayNameFor(model => model.PaidAmount)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.RemainingAmount) 
+                @Html.DisplayNameFor(model => model.RemainingAmount)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Status) 
+                @Html.DisplayNameFor(model => model.Status)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Booking)
@@ -58,19 +58,26 @@
                 @Html.DisplayFor(modelItem => item.DueDate)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.TotalAmount) 
+                @Html.DisplayFor(modelItem => item.TotalAmount)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.PaidAmount) 
+                @Html.DisplayFor(modelItem => item.PaidAmount)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.RemainingAmount) 
+                @Html.DisplayFor(modelItem => item.RemainingAmount)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.Status) 
+                @Html.DisplayFor(modelItem => item.Status)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.Booking.Id)
+                @if (item.Booking != null)
+                {
+                    <span>العميل: @(item.Booking.Customer?.FullName ?? "غير معروف") - الغرفة: @(item.Booking.Room?.RoomNumber ?? "غير معروف")</span>
+                }
+                else
+                {
+                    <span>لا يوجد حجز مرتبط</span>
+                }
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.Customer.FullName)

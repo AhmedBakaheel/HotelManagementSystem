@@ -7,6 +7,11 @@ namespace HotelManagementSystem.Models
     {
         [Key]
         public int Id { get; set; }
+        [Required(ErrorMessage = "الخدمة مطلوبة.")]
+        [Display(Name = "الخدمة")]
+        public int ServiceId { get; set; } 
+        [ForeignKey("ServiceId")]
+        public virtual Service Service { get; set; }
 
         [Required(ErrorMessage = "اسم البند مطلوب.")]
         [Display(Name = "البند")]

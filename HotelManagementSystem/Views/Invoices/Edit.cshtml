@@ -16,12 +16,12 @@
         <form asp-action="Edit">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="Id" />
-            <input type="hidden" asp-for="InvoiceNumber" /> 
+            <input type="hidden" asp-for="InvoiceNumber" />
 
-            
+           
             <div class="form-group">
                 <label asp-for="InvoiceNumber" class="control-label"></label>
-                <p class="form-control-plaintext">@Model.InvoiceNumber</p> 
+                <p class="form-control-plaintext">@Model.InvoiceNumber</p>
             </div>
             <div class="form-group">
                 <label asp-for="InvoiceDate" class="control-label"></label>
@@ -60,8 +60,9 @@
                 <textarea asp-for="Notes" class="form-control"></textarea>
                 <span asp-validation-for="Notes" class="text-danger"></span>
             </div>
+            <input type="hidden" asp-for="TotalAmount" id="TotalAmount" />
 
-
+            
             <div class="form-group">
                 <label class="control-label">المبلغ الإجمالي المحسوب:</label>
                 <span id="calculatedTotalDisplay" class="form-control-plaintext font-weight-bold text-primary">0.00</span>
@@ -70,13 +71,10 @@
             <hr />
             <h4>بنود الفاتورة</h4>
             <div id="invoiceItemsContainer">
-               
                 @if (Model.InvoiceItems != null && Model.InvoiceItems.Any())
                 {
-                    
                     @foreach (var item in Model.InvoiceItems)
                     {
-                     
                         @Html.EditorFor(modelItem => item)
                     }
                 }
@@ -98,11 +96,10 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
     <div id="invoiceItemTemplate" style="display:none;">
         @{
-           
             var dummyInvoiceItem = new HotelManagementSystem.Models.InvoiceItem();
-            
             ViewData.TemplateInfo.HtmlFieldPrefix = "InvoiceItems[__INDEX__]";
             @Html.EditorFor(x => dummyInvoiceItem)
             ViewData.TemplateInfo.HtmlFieldPrefix = string.Empty;
@@ -110,44 +107,63 @@
     </div>
 
     <script>
-        $(document).ready(function () {            
+        $(document).ready(function () {
             var itemIndex = @(Model.InvoiceItems != null ? Model.InvoiceItems.Count : 0);
-           
             var invoiceItemTemplateHtml = $('#invoiceItemTemplate').html();
 
-          
+            var servicesData = @Html.Raw(Json.Serialize(ViewBag.Services));
+
             function addInvoiceItemRow() {
                 var newRowHtml = invoiceItemTemplateHtml;
                 newRowHtml = newRowHtml.replace(/__INDEX__/g, itemIndex);
-
                 $('#invoiceItemsContainer').append(newRowHtml);
 
-                itemIndex++; 
+                itemIndex++;
             }
+
+           
             if ($('#invoiceItemsContainer').children().length === 0) {
                 addInvoiceItemRow();
             }
+
             $('#addInvoiceItemBtn').click(function () {
                 addInvoiceItemRow();
             });
+
             $('#invoiceItemsContainer').on('click', '.remove-item-btn', function () {
                 $(this).closest('.invoice-item-row').remove();
-                calculateTotalAmount(); 
+                calculateTotalAmount();
             });
+
+            $('#invoiceItemsContainer').on('change', '.item-service-id', function () {
+                var selectedServiceId = $(this).val();
+                var $unitPriceInput = $(this).closest('.invoice-item-row').find('.item-unit-price');
+
+                var service = servicesData.find(s => s.id == selectedServiceId);
+                if (service) {
+                    $unitPriceInput.val(service.unitPrice.toFixed(2));
+                } else {
+                    $unitPriceInput.val('0.00');
+                }
+                calculateTotalAmount();
+            });
+
             function calculateTotalAmount() {
                 let totalAmount = 0;
                 $('#invoiceItemsContainer .invoice-item-row').each(function () {
                     var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
                     var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
                     var subtotal = quantity * unitPrice;
-                    $(this).find('.item-subtotal').val(subtotal.toFixed(2)); 
+                    $(this).find('.item-subtotal').val(subtotal.toFixed(2));
 
                     totalAmount += subtotal;
                 });
-                 $('#TotalAmount').val(totalAmount.toFixed(2));
-                  $('#calculatedTotalDisplay').text(totalAmount.toFixed(2));
+                $('#TotalAmount').val(totalAmount.toFixed(2));
+                $('#calculatedTotalDisplay').text(totalAmount.toFixed(2)); 
             }
+
             $('#invoiceItemsContainer').on('input', '.item-quantity, .item-unit-price', calculateTotalAmount);
+
             calculateTotalAmount();
         });
     </script>
