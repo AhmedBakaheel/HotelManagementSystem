@@ -1,0 +1,38 @@
+﻿@model HotelManagementSystem.Models.InvoiceItem
+
+
+@Html.HiddenFor(model => model.Id)
+@Html.HiddenFor(model => model.InvoiceId)
+
+<div class="row invoice-item-row mb-2 border p-2 rounded">
+    <div class="col-md-4">
+        <div class="form-group">
+            <label asp-for="ItemName" class="control-label"></label>
+            <input asp-for="ItemName" class="form-control" />
+            <span asp-validation-for="ItemName" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="form-group">
+            <label asp-for="Quantity" class="control-label"></label>
+            <input asp-for="Quantity" class="form-control item-quantity" type="number" min="1" />
+            <span asp-validation-for="Quantity" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="form-group">
+            <label asp-for="UnitPrice" class="control-label"></label>
+            <input asp-for="UnitPrice" class="form-control item-unit-price" type="number" step="0.01" min="0.01" />
+            <span asp-validation-for="UnitPrice" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="form-group">
+            <label asp-for="Subtotal" class="control-label"></label>
+            <input asp-for="Subtotal" class="form-control item-subtotal" readonly /> 
+        </div>
+    </div>
+    <div class="col-md-1 d-flex align-items-end">
+        <button type="button" class="btn btn-danger remove-item-btn" style="width:100%;">حذف</button>
+    </div>
+</div>

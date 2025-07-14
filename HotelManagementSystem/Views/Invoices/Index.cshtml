@@ -1,0 +1,89 @@
+﻿@model IEnumerable<HotelManagementSystem.Models.Invoice>
+
+@{
+    ViewData["Title"] = "الفواتير";
+}
+
+<h1>الفواتير</h1>
+
+<p>
+    <a asp-action="Create">إنشاء فاتورة جديدة</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.InvoiceNumber)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.InvoiceDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.DueDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.TotalAmount) 
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PaidAmount) 
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RemainingAmount) 
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Status) 
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Booking)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Customer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Notes)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoiceNumber)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoiceDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.DueDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TotalAmount) 
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PaidAmount) 
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RemainingAmount) 
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Status) 
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Booking.Id)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Customer.FullName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Notes)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">تفاصيل</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">حذف</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

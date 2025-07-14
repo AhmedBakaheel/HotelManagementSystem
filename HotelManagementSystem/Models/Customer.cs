@@ -15,6 +15,9 @@ namespace HotelManagementSystem.Models
         [Display(Name = "الاسم الأخير")]
         public string LastName { get; set; }
 
+        [Display(Name = "اسم العميل")]
+        public string FullName => $"{FirstName} {LastName}"; 
+
         [Required(ErrorMessage = "البريد الإلكتروني مطلوب.")]
         [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة.")]
         [Display(Name = "البريد الإلكتروني")]

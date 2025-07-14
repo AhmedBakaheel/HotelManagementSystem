@@ -1,0 +1,138 @@
+﻿@model HotelManagementSystem.Models.Invoice
+@using HotelManagementSystem.Enums
+@using HotelManagementSystem.Models
+@using HotelManagementSystem.Extensions
+
+@{
+    ViewData["Title"] = "إنشاء فاتورة";
+}
+
+<h1>إنشاء فاتورة</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+           
+            <div class="form-group">
+                <label asp-for="InvoiceDate" class="control-label"></label>
+                <input asp-for="InvoiceDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                <span asp-validation-for="InvoiceDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DueDate" class="control-label"></label>
+                <input asp-for="DueDate" class="form-control" type="date" value="@DateTime.Now.AddDays(7).ToString("yyyy-MM-dd")" />
+                <span asp-validation-for="DueDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PaidAmount" class="control-label"></label>
+                <input asp-for="PaidAmount" class="form-control" type="number" step="0.01" min="0" />
+                <span asp-validation-for="PaidAmount" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Status" class="control-label"></label>
+                <select asp-for="Status" asp-items="Html.GetEnumSelectList<InvoiceStatus>()" class="form-control"></select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="BookingId" class="control-label"></label>
+                <select asp-for="BookingId" class="form-control" asp-items="ViewBag.BookingId">
+                    <option value="">-- اختر حجز --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label asp-for="CustomerId" class="control-label"></label>
+                <select asp-for="CustomerId" class="form-control" asp-items="ViewBag.CustomerId">
+                    <option value="">-- اختر عميل --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label asp-for="Notes" class="control-label"></label>
+                <textarea asp-for="Notes" class="form-control"></textarea>
+                <span asp-validation-for="Notes" class="text-danger"></span>
+            </div>
+
+          
+            <div class="form-group">
+                <label class="control-label">المبلغ الإجمالي المحسوب:</label>
+                <span id="calculatedTotalDisplay" class="form-control-plaintext font-weight-bold text-primary">0.00</span>
+            </div>
+
+            <hr />
+            <h4>بنود الفاتورة</h4>
+            <div id="invoiceItemsContainer">
+             
+            </div>
+            <button type="button" id="addInvoiceItemBtn" class="btn btn-secondary mb-3">إضافة بند جديد</button>
+
+            <div class="form-group mt-3">
+                <input type="submit" value="إنشاء" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">العودة إلى القائمة</a>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <div id="invoiceItemTemplate" style="display:none;">
+        @{
+            var dummyInvoiceItem = new HotelManagementSystem.Models.InvoiceItem();
+            ViewData.TemplateInfo.HtmlFieldPrefix = "InvoiceItems[__INDEX__]"; 
+            @Html.EditorFor(x => dummyInvoiceItem)
+            ViewData.TemplateInfo.HtmlFieldPrefix = string.Empty; 
+        }
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            var itemIndex = 0; 
+            var invoiceItemTemplateHtml = $('#invoiceItemTemplate').html();
+
+            
+            function addInvoiceItemRow() {
+                var newRowHtml = invoiceItemTemplateHtml;
+                
+                newRowHtml = newRowHtml.replace(/__INDEX__/g, itemIndex);
+
+                $('#invoiceItemsContainer').append(newRowHtml);
+
+                itemIndex++;
+            }
+            addInvoiceItemRow();
+            $('#addInvoiceItemBtn').click(function () {
+                addInvoiceItemRow();
+            });
+            $('#invoiceItemsContainer').on('click', '.remove-item-btn', function () {
+                $(this).closest('.invoice-item-row').remove();
+                calculateTotalAmount(); 
+            });
+            function calculateTotalAmount() {
+                let totalAmount = 0;
+                $('#invoiceItemsContainer .invoice-item-row').each(function () {
+                    var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
+                    var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
+                    var subtotal = quantity * unitPrice;
+                    $(this).find('.item-subtotal').val(subtotal.toFixed(2));
+
+                    totalAmount += subtotal;
+                });
+               $('#TotalAmount').val(totalAmount.toFixed(2));
+                  $('#calculatedTotalDisplay').text(totalAmount.toFixed(2));
+            }
+
+           
+            $('#invoiceItemsContainer').on('input', '.item-quantity, .item-unit-price', calculateTotalAmount);
+
+            
+            calculateTotalAmount();
+        });
+    </script>
+}
