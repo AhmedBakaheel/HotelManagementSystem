@@ -12,10 +12,11 @@
 <hr />
 <div class="row">
     <div class="col-md-8">
-        <form asp-action="Create">
+        <form asp-action="Create" id="invoiceForm">
+            {{-- إضافة ID للنموذج --}}
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-            
+            {{-- حقول الفاتورة الرئيسية --}}
             <div class="form-group">
                 <label asp-for="InvoiceDate" class="control-label"></label>
                 <input asp-for="InvoiceDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
@@ -39,7 +40,7 @@
             <div class="form-group">
                 <label asp-for="BookingId" class="control-label"></label>
                 <select asp-for="BookingId" class="form-control" asp-items="ViewBag.BookingId">
-                    <option value="">-- اختر حجز --</option>
+                    <option value="" disabled selected>-- اختر حجز --</option>
                 </select>
             </div>
             <div class="form-group">
@@ -53,8 +54,11 @@
                 <textarea asp-for="Notes" class="form-control"></textarea>
                 <span asp-validation-for="Notes" class="text-danger"></span>
             </div>
+
+           
             <input type="hidden" asp-for="TotalAmount" id="TotalAmount" />
 
+         
             <div class="form-group">
                 <label class="control-label">المبلغ الإجمالي المحسوب:</label>
                 <span id="calculatedTotalDisplay" class="form-control-plaintext font-weight-bold text-primary">0.00</span>
@@ -63,6 +67,7 @@
             <hr />
             <h4>بنود الفاتورة</h4>
             <div id="invoiceItemsContainer">
+               
             </div>
             <button type="button" id="addInvoiceItemBtn" class="btn btn-secondary mb-3">إضافة بند جديد</button>
 
@@ -82,6 +87,7 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
+        {{-- قالب مخفي لبند الفاتورة، يستخدم مؤشر وهمي (placeholder) --}}
     <div id="invoiceItemTemplate" style="display:none;">
         @{
             var dummyInvoiceItem = new HotelManagementSystem.Models.InvoiceItem();
@@ -95,17 +101,24 @@
         $(document).ready(function () {
             var itemIndex = 0;
             var invoiceItemTemplateHtml = $('#invoiceItemTemplate').html();
+
+            // قائمة الخدمات مع أسعارها لجلبها بواسطة JavaScript
             var servicesData = @Html.Raw(Json.Serialize(ViewBag.Services));
 
             function addInvoiceItemRow() {
                 var newRowHtml = invoiceItemTemplateHtml;
+                // استبدال المؤشر الوهمي "__INDEX__" بالمؤشر الحقيقي في كل من ID و NAME attributes
                 newRowHtml = newRowHtml.replace(/__INDEX__/g, itemIndex);
+
                 $('#invoiceItemsContainer').append(newRowHtml);
+
+                // Debugging: طباعة HTML للصف المضاف حديثاً
+                console.log("Newly added row HTML for index " + itemIndex + ":", newRowHtml);
 
                 itemIndex++;
             }
 
-            addInvoiceItemRow(); 
+            addInvoiceItemRow(); // إضافة أول بند عند تحميل صفحة الإنشاء
 
             $('#addInvoiceItemBtn').click(function () {
                 addInvoiceItemRow();
@@ -121,13 +134,13 @@
                 var selectedServiceId = $(this).val();
                 var $unitPriceInput = $(this).closest('.invoice-item-row').find('.item-unit-price');
 
-                var service = servicesData.find(s => s.id == selectedServiceId); // البحث عن الخدمة في البيانات المحملة
+                var service = servicesData.find(s => s.id == selectedServiceId);
                 if (service) {
-                    $unitPriceInput.val(service.unitPrice.toFixed(2)); // تعبئة سعر الوحدة
+                    $unitPriceInput.val(service.unitPrice.toFixed(2));
                 } else {
-                    $unitPriceInput.val('0.00'); // إذا لم يتم اختيار خدمة أو كانت غير صالحة
+                    $unitPriceInput.val('0.00');
                 }
-                calculateTotalAmount(); // أعد حساب الإجمالي
+                calculateTotalAmount();
             });
 
             function calculateTotalAmount() {
@@ -141,10 +154,19 @@
                     totalAmount += subtotal;
                 });
                 $('#TotalAmount').val(totalAmount.toFixed(2));
-                $('#calculatedTotalDisplay').text(totalAmount.toFixed(2)); 
+                $('#calculatedTotalDisplay').text(totalAmount.toFixed(2));
             }
 
+            // استمع للتغييرات في حقول الكمية والسعر لإعادة حساب الإجمالي
             $('#invoiceItemsContainer').on('input', '.item-quantity, .item-unit-price', calculateTotalAmount);
+
+            // Debugging: طباعة بيانات النموذج قبل الإرسال
+            $('#invoiceForm').submit(function() {
+                var formData = $(this).serializeArray();
+                console.log("Form data submitted (serialized array):", formData);
+                // يمكنك أيضاً طباعة البيانات كـ URL-encoded string
+                // console.log("Form data submitted (URL-encoded):", $(this).serialize());
+            });
 
             calculateTotalAmount();
         });

@@ -3,6 +3,10 @@
 @Html.HiddenFor(model => model.Id)
 @Html.HiddenFor(model => model.InvoiceId)
 
+
+<input type="hidden" name="InvoiceItems.Index" value="__INDEX__" />
+
+
 <div class="row invoice-item-row mb-2 border p-2 rounded">
     <div class="col-md-4">
         <div class="form-group">
@@ -31,7 +35,7 @@
     <div class="col-md-2">
         <div class="form-group">
             <label asp-for="Subtotal" class="control-label"></label>
-            <input asp-for="Subtotal" class="form-control item-subtotal" readonly /> 
+            <input asp-for="Subtotal" class="form-control item-subtotal" readonly />
         </div>
     </div>
     <div class="col-md-1 d-flex align-items-end">

@@ -1,0 +1,56 @@
+﻿@model HotelManagementSystem.Models.Payment
+
+@{
+    ViewData["Title"] = "تفاصيل الدفعة";
+}
+
+<h1>تفاصيل الدفعة</h1>
+
+<div>
+    <h4>الدفعة</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice)
+        </dt>
+        <dd class="col-sm-10">
+            
+            @if (Model.Invoice != null)
+            {
+                <span>فاتورة #@Model.Invoice.InvoiceNumber - الإجمالي: @Model.Invoice.TotalAmount.ToString("N2")</span>
+            }
+            else
+            {
+                <span>فاتورة غير معروفة</span>
+            }
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Amount)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Amount)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PaymentDate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PaymentDate)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Method)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Method)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Notes)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Notes)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model?.Id">تعديل</a> |
+    <a asp-action="Index">العودة إلى القائمة</a>
+</div>
