@@ -1,7 +1,7 @@
 ﻿@model HotelManagementSystem.Models.Invoice
 @using HotelManagementSystem.Enums
-@using HotelManagementSystem.Models
-@using HotelManagementSystem.Extensions
+@using HotelManagementSystem.Models 
+@using HotelManagementSystem.Extensions 
 
 @{
     ViewData["Title"] = "إنشاء فاتورة";
@@ -13,10 +13,8 @@
 <div class="row">
     <div class="col-md-8">
         <form asp-action="Create" id="invoiceForm">
-            {{-- إضافة ID للنموذج --}}
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-            {{-- حقول الفاتورة الرئيسية --}}
             <div class="form-group">
                 <label asp-for="InvoiceDate" class="control-label"></label>
                 <input asp-for="InvoiceDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
@@ -53,12 +51,10 @@
                 <label asp-for="Notes" class="control-label"></label>
                 <textarea asp-for="Notes" class="form-control"></textarea>
                 <span asp-validation-for="Notes" class="text-danger"></span>
-            </div>
+            </div> 
 
-           
             <input type="hidden" asp-for="TotalAmount" id="TotalAmount" />
 
-         
             <div class="form-group">
                 <label class="control-label">المبلغ الإجمالي المحسوب:</label>
                 <span id="calculatedTotalDisplay" class="form-control-plaintext font-weight-bold text-primary">0.00</span>
@@ -67,7 +63,6 @@
             <hr />
             <h4>بنود الفاتورة</h4>
             <div id="invoiceItemsContainer">
-               
             </div>
             <button type="button" id="addInvoiceItemBtn" class="btn btn-secondary mb-3">إضافة بند جديد</button>
 
@@ -83,42 +78,99 @@
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 
-        {{-- قالب مخفي لبند الفاتورة، يستخدم مؤشر وهمي (placeholder) --}}
+    
     <div id="invoiceItemTemplate" style="display:none;">
         @{
             var dummyInvoiceItem = new HotelManagementSystem.Models.InvoiceItem();
-            ViewData.TemplateInfo.HtmlFieldPrefix = "InvoiceItems[__INDEX__]";
+            ViewData.TemplateInfo.HtmlFieldPrefix = "InvoiceItems[__INDEX__]"; 
             @Html.EditorFor(x => dummyInvoiceItem)
-            ViewData.TemplateInfo.HtmlFieldPrefix = string.Empty;
+            ViewData.TemplateInfo.HtmlFieldPrefix = string.Empty; 
         }
     </div>
+    <script id="services-json-data" type="application/json">
+        @Html.Raw(Json.Serialize(ViewBag.Services))
+    </script>
+    <script id="bookings-json-data" type="application/json">
+        @Html.Raw(Json.Serialize(ViewBag.BookingsForJs))
+    </script>
 
     <script>
         $(document).ready(function () {
             var itemIndex = 0;
+            // <== تم تغيير .text() إلى .html() لجلب المحتوى من الـ div المخفي
             var invoiceItemTemplateHtml = $('#invoiceItemTemplate').html();
 
-            // قائمة الخدمات مع أسعارها لجلبها بواسطة JavaScript
-            var servicesData = @Html.Raw(Json.Serialize(ViewBag.Services));
+            var servicesData;
+            var bookingsData; 
+
+            try {
+                var servicesJsonString = $('#services-json-data').text();
+                console.log("Raw servicesJsonString (from script tag):", servicesJsonString); 
+                if (servicesJsonString && servicesJsonString.trim().length > 0) {
+                    servicesData = JSON.parse(servicesJsonString);
+                } else {
+                    servicesData = []; 
+                }
+                console.log("Services Data Loaded (JS):", servicesData); 
+            } catch (e) {
+                console.error("Error parsing servicesData from script tag:", e); 
+                servicesData = []; 
+            }
+            
+            if (!Array.isArray(servicesData)) {
+                console.warn("servicesData was not an array, defaulting to empty array.");
+                servicesData = [];
+            }
+
+            try {
+                var bookingsJsonString = $('#bookings-json-data').text();
+                console.log("Raw bookingsJsonString (from script tag):", bookingsJsonString); 
+                if (bookingsJsonString && bookingsJsonString.trim().length > 0) {
+                    bookingsData = JSON.parse(bookingsJsonString);
+                } else {
+                    bookingsData = []; 
+                }
+                console.log("Bookings Data Loaded (JS):", bookingsData); 
+            } catch (e) {
+                console.error("Error parsing bookingsData from script tag:", e); 
+                bookingsData = [];
+            }
+
+            if (!Array.isArray(bookingsData)) {
+                console.warn("bookingsData was not an array, defaulting to empty array.");
+                bookingsData = [];
+            }
 
             function addInvoiceItemRow() {
                 var newRowHtml = invoiceItemTemplateHtml;
-                // استبدال المؤشر الوهمي "__INDEX__" بالمؤشر الحقيقي في كل من ID و NAME attributes
-                newRowHtml = newRowHtml.replace(/__INDEX__/g, itemIndex);
-
+                newRowHtml = newRowHtml.replace(/__INDEX__/g, itemIndex); 
+                
                 $('#invoiceItemsContainer').append(newRowHtml);
-
-                // Debugging: طباعة HTML للصف المضاف حديثاً
-                console.log("Newly added row HTML for index " + itemIndex + ":", newRowHtml);
+                
+                // <== تحديث قائمة الخدمات لكل بند جديد
+                var $newItemRow = $('#invoiceItemsContainer').children().last();
+                var $serviceSelect = $newItemRow.find('.item-service-id');
+                $serviceSelect.empty(); // تفريغ الخيارات الحالية
+                $serviceSelect.append($('<option>', {
+                    value: '',
+                    text: '-- اختر خدمة --',
+                    disabled: true,
+                    selected: true
+                }));
+                $.each(servicesData, function (i, service) {
+                    $serviceSelect.append($('<option>', {
+                        value: service.id, 
+                        text: service.name 
+                    }));
+                });
 
                 itemIndex++;
             }
 
-            addInvoiceItemRow(); // إضافة أول بند عند تحميل صفحة الإنشاء
+            addInvoiceItemRow(); 
 
             $('#addInvoiceItemBtn').click(function () {
                 addInvoiceItemRow();
@@ -129,22 +181,49 @@
                 calculateTotalAmount();
             });
 
-            // دالة جديدة: عند تغيير اختيار الخدمة، قم بتعبئة سعر الوحدة
             $('#invoiceItemsContainer').on('change', '.item-service-id', function () {
-                var selectedServiceId = $(this).val();
+                var selectedServiceId = parseInt($(this).val()); 
                 var $unitPriceInput = $(this).closest('.invoice-item-row').find('.item-unit-price');
+                
+                console.log("Selected Service ID (Parsed):", selectedServiceId); 
+                console.log("Current servicesData:", servicesData); 
 
-                var service = servicesData.find(s => s.id == selectedServiceId);
+                var service = servicesData.find(s => s.id === selectedServiceId); 
+                console.log("Found Service:", service); 
+
                 if (service) {
                     $unitPriceInput.val(service.unitPrice.toFixed(2));
                 } else {
-                    $unitPriceInput.val('0.00');
+                    $unitPriceInput.val('0.00'); 
                 }
+                calculateTotalAmount(); 
+            });
+
+            // Listen for changes on the BookingId dropdown.
+            $('#BookingId').on('change', function() {
                 calculateTotalAmount();
             });
 
             function calculateTotalAmount() {
                 let totalAmount = 0;
+                let bookingCost = 0; 
+
+                // Calculate booking cost from JavaScript.
+                var selectedBookingId = $('#BookingId').val();
+                if (selectedBookingId) {
+                    var booking = bookingsData.find(b => b.id == selectedBookingId);
+                    if (booking && booking.checkInDate && booking.checkOutDate && booking.roomPricePerNight !== undefined) {
+                        var checkIn = new Date(booking.checkInDate);
+                        var checkOut = new Date(booking.checkOutDate);
+                        var timeDiff = Math.abs(checkOut.getTime() - checkIn.getTime());
+                        var numberOfNights = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                        if (numberOfNights < 0) numberOfNights = 0; 
+                        bookingCost = booking.roomPricePerNight * numberOfNights;
+                        console.log("Calculated Booking Cost (JS):", bookingCost); 
+                    }
+                }
+                totalAmount += bookingCost; 
+
                 $('#invoiceItemsContainer .invoice-item-row').each(function () {
                     var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
                     var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
@@ -154,21 +233,12 @@
                     totalAmount += subtotal;
                 });
                 $('#TotalAmount').val(totalAmount.toFixed(2));
-                $('#calculatedTotalDisplay').text(totalAmount.toFixed(2));
+                $('#calculatedTotalDisplay').text(totalAmount.toFixed(2)); 
             }
 
-            // استمع للتغييرات في حقول الكمية والسعر لإعادة حساب الإجمالي
             $('#invoiceItemsContainer').on('input', '.item-quantity, .item-unit-price', calculateTotalAmount);
 
-            // Debugging: طباعة بيانات النموذج قبل الإرسال
-            $('#invoiceForm').submit(function() {
-                var formData = $(this).serializeArray();
-                console.log("Form data submitted (serialized array):", formData);
-                // يمكنك أيضاً طباعة البيانات كـ URL-encoded string
-                // console.log("Form data submitted (URL-encoded):", $(this).serialize());
-            });
-
-            calculateTotalAmount();
+            calculateTotalAmount(); // Initial calculation on page load.
         });
     </script>
 }

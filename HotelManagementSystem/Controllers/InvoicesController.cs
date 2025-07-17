@@ -7,7 +7,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Diagnostics; // <== أضف هذا الـ using لـ Debug.WriteLine
+using System.Diagnostics; // Required for Debug.WriteLine
 
 namespace HotelManagementSystem.Controllers
 {
@@ -21,7 +21,7 @@ namespace HotelManagementSystem.Controllers
         }
 
         // GET: Invoices
-        // يعرض قائمة بجميع الفواتير مع تضمين بيانات الحجز والعميل والغرفة المرتبطة
+        // يعرض قائمة بجميع الفواتير مع تضمين بيانات الحجز والعميل والغرفة المرتبطة.
         public async Task<IActionResult> Index()
         {
             var applicationDbContext = _context.Invoices
@@ -35,7 +35,7 @@ namespace HotelManagementSystem.Controllers
         }
 
         // GET: Invoices/Details/5
-        // يعرض تفاصيل فاتورة محددة مع جميع بياناتها المرتبطة
+        // يعرض تفاصيل فاتورة محددة مع جميع بياناتها المرتبطة.
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -45,12 +45,12 @@ namespace HotelManagementSystem.Controllers
 
             var invoice = await _context.Invoices
                 .Include(i => i.Booking)
-                    .ThenInclude(b => b.Customer) // تضمين العميل المرتبط بالحجز
+                    .ThenInclude(b => b.Customer)
                 .Include(i => i.Booking)
-                    .ThenInclude(b => b.Room) // تضمين الغرفة المرتبطة بالحجز
-                .Include(i => i.Customer) // العميل المباشر للفاتورة
-                .Include(i => i.InvoiceItems) // تضمين بنود الفاتورة
-                    .ThenInclude(ii => ii.Service) // وتضمين الخدمة لكل بند فاتورة
+                    .ThenInclude(b => b.Room)
+                .Include(i => i.Customer)
+                .Include(i => i.InvoiceItems)
+                    .ThenInclude(ii => ii.Service)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (invoice == null)
@@ -62,16 +62,34 @@ namespace HotelManagementSystem.Controllers
         }
 
         // GET: Invoices/Create
-        // يعرض نموذج إنشاء فاتورة جديدة
+        // يعرض نموذج إنشاء فاتورة جديدة.
         public async Task<IActionResult> Create()
         {
-            // جلب الحجوزات إلى الذاكرة أولاً قبل بناء النص الوصفي لتجنب خطأ "null propagating operator"
+            // جلب الحجوزات إلى الذاكرة أولاً قبل بناء النص الوصفي لتجنب خطأ "null propagating operator".
             var bookings = await _context.Bookings
                                          .Include(b => b.Customer)
                                          .Include(b => b.Room)
                                          .ToListAsync();
 
-            // إنشاء SelectList بنص وصفي للحجوزات (العميل - الغرفة)
+            // إعداد بيانات الحجوزات للـ JavaScript (لحساب الإجمالي من جانب العميل)
+            var bookingsForJs = bookings.Select(b => new
+            {
+                b.Id,
+                b.CheckInDate,
+                b.CheckOutDate,
+                RoomPricePerNight = b.Room?.PricePerNight ?? 0 // التعامل مع Room == null بأمان
+            }).ToList();
+            ViewBag.BookingsForJs = bookingsForJs; // تمريرها إلى ViewBag ليستهلكها الـ JS
+
+            // Debugging: Log bookingsForJs content
+            Debug.WriteLine("--- BookingsForJs (Create GET) ---");
+            foreach (var b in bookingsForJs)
+            {
+                Debug.WriteLine($"BookingId: {b.Id}, CheckIn: {b.CheckInDate}, CheckOut: {b.CheckOutDate}, PricePerNight: {b.RoomPricePerNight}");
+            }
+            Debug.WriteLine("----------------------------------");
+
+            // إنشاء SelectList بنص وصفي للحجوزات (العميل - الغرفة).
             ViewData["BookingId"] = new SelectList(bookings.Select(b => new
             {
                 Id = b.Id,
@@ -79,17 +97,28 @@ namespace HotelManagementSystem.Controllers
             }), "Id", "Display");
 
             ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "FullName");
-            ViewBag.Services = _context.Services.Where(s => s.IsActive).ToList(); // توفير قائمة الخدمات النشطة
+
+            var services = _context.Services.Where(s => s.IsActive).ToList();
+            ViewBag.Services = services; // توفير قائمة الخدمات النشطة
+
+            // Debugging: Log services content
+            Debug.WriteLine("--- Services (Create GET) ---");
+            foreach (var s in services)
+            {
+                Debug.WriteLine($"ServiceId: {s.Id}, Name: {s.Name}, UnitPrice: {s.UnitPrice}");
+            }
+            Debug.WriteLine("-----------------------------");
+
             return View();
         }
 
         // POST: Invoices/Create
-        // يستقبل بيانات الفاتورة الجديدة من النموذج ويقوم بحفظها
+        // يستقبل بيانات الفاتورة الجديدة من النموذج ويقوم بحفظها.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,InvoiceNumber,InvoiceDate,DueDate,TotalAmount,PaidAmount,Status,BookingId,CustomerId,Notes,InvoiceItems")] Invoice invoice)
         {
-            // 1. توليد رقم الفاتورة التسلسلي تلقائياً إذا لم يكن موجوداً
+            // 1. توليد رقم الفاتورة التسلسلي تلقائياً إذا لم يكن موجوداً.
             if (string.IsNullOrEmpty(invoice.InvoiceNumber))
             {
                 string prefix = $"INV-{DateTime.Now.Year}-";
@@ -111,8 +140,8 @@ namespace HotelManagementSystem.Controllers
                 invoice.InvoiceNumber = $"{prefix}{lastNumber:D4}";
             }
 
-            // Debugging: تحقق من البيانات الخام المرسلة من النموذج
-            Debug.WriteLine("--- Raw Form Data for InvoiceItems (Create) ---");
+            // Debugging: Check raw form data for InvoiceItems (useful for model binding issues).
+            Debug.WriteLine("--- Raw Form Data for InvoiceItems (Create POST) ---");
             foreach (var key in Request.Form.Keys)
             {
                 if (key.StartsWith("InvoiceItems["))
@@ -122,8 +151,8 @@ namespace HotelManagementSystem.Controllers
             }
             Debug.WriteLine("------------------------------------");
 
-            // 2. تعبئة سعر الوحدة (UnitPrice) لكل بند فاتورة من قاعدة البيانات
-            // ومعالجة البنود غير الصالحة أو الفارغة
+            // 2. تعبئة سعر الوحدة (UnitPrice) لكل بند فاتورة من قاعدة البيانات.
+            // ومعالجة البنود غير الصالحة أو الفارغة.
             if (invoice.InvoiceItems != null && invoice.InvoiceItems.Any())
             {
                 var processedInvoiceItems = new List<InvoiceItem>();
@@ -133,11 +162,15 @@ namespace HotelManagementSystem.Controllers
                 {
                     var item = invoice.InvoiceItems.ElementAt(i);
 
-                    // تحقق من أن البند ليس null وأن ServiceId صالح
+                    // Debugging: Log item details received
+                    Debug.WriteLine($"Processing InvoiceItem[{i}]: ServiceId={item?.ServiceId}, Quantity={item?.Quantity}, UnitPrice={item?.UnitPrice}");
+
+                    // تحقق إضافي: إذا كان البند نفسه null أو ServiceId غير صالح، تخطاه أو أضف خطأ.
                     if (item == null || item.ServiceId <= 0)
                     {
                         ModelState.AddModelError($"InvoiceItems[{i}].ServiceId", "الخدمة المختارة غير صالحة أو مفقودة لهذا البند.");
-                        continue; // تخطي هذا البند
+                        Debug.WriteLine($"  Error: ServiceId invalid or missing for item {i}. Skipping.");
+                        continue; // Skip this item and continue the loop
                     }
 
                     var service = allServices.FirstOrDefault(s => s.Id == item.ServiceId);
@@ -145,13 +178,15 @@ namespace HotelManagementSystem.Controllers
                     {
                         item.UnitPrice = service.UnitPrice; // تعيين سعر الوحدة من الخدمة
                         processedInvoiceItems.Add(item); // إضافة البند المعالج والصالح
+                        Debug.WriteLine($"  Service found. UnitPrice set to: {item.UnitPrice}");
                     }
                     else
                     {
                         ModelState.AddModelError($"InvoiceItems[{i}].ServiceId", "الخدمة المختارة غير موجودة في قاعدة البيانات.");
+                        Debug.WriteLine($"  Error: Service with ID {item.ServiceId} not found in DB.");
                     }
                 }
-                // <== التعديل الحاسم: استبدال المجموعة الأصلية بالمجموعة المعالجة
+                // الإصلاح الحاسم: استبدال المجموعة الأصلية بالمجموعة المعالجة.
                 invoice.InvoiceItems = processedInvoiceItems;
 
                 if (!invoice.InvoiceItems.Any())
@@ -164,7 +199,7 @@ namespace HotelManagementSystem.Controllers
                 Debug.WriteLine("InvoiceItems collection is NULL or EMPTY after model binding in Create POST action.");
             }
 
-            // حساب تكلفة الحجز
+            // حساب تكلفة الحجز.
             decimal bookingCost = 0;
             if (invoice.BookingId.HasValue)
             {
@@ -174,20 +209,20 @@ namespace HotelManagementSystem.Controllers
                 if (booking != null)
                 {
                     bookingCost = CalculateBookingCost(booking); // استخدام الدالة المساعدة
-                    Debug.WriteLine($"Calculated Booking Cost: {bookingCost}");
+                    Debug.WriteLine($"Calculated Booking Cost (Server): {bookingCost}");
                 }
             }
 
-            // 3. حساب TotalAmount بناءً على بنود الفاتورة المستلمة + تكلفة الحجز
+            // 3. إعادة حساب TotalAmount بناءً على بنود الفاتورة المستلمة + تكلفة الحجز.
+            // هذا الشرط والـ Sum يعملان الآن على المجموعة المعالجة والصالحة.
             decimal invoiceItemsSum = 0;
-            // <== هذا الشرط والـ Sum يعملان الآن على المجموعة المعالجة والصالحة
             if (invoice.InvoiceItems != null && invoice.InvoiceItems.Any())
             {
                 invoiceItemsSum = invoice.InvoiceItems.Sum(item => item.Quantity * item.UnitPrice);
             }
             invoice.TotalAmount = invoiceItemsSum + bookingCost;
 
-            // 4. التحقق من صحة النموذج
+            // 4. التحقق من صحة حالة النموذج.
             if (!ModelState.IsValid)
             {
                 Debug.WriteLine("ModelState is NOT valid in Create POST action. Errors:");
@@ -203,11 +238,21 @@ namespace HotelManagementSystem.Controllers
                     }
                 }
 
-                // 5. إذا كان النموذج غير صالح، أعد تعبئة الـ SelectLists والـ ViewBag.Services
+                // 5. إذا كان النموذج غير صالح، أعد تعبئة SelectLists و ViewBag.Services.
+                // إعادة تعبئة بيانات الحجوزات للـ JavaScript عند فشل التحقق.
                 var bookings = await _context.Bookings
                                              .Include(b => b.Customer)
                                              .Include(b => b.Room)
                                              .ToListAsync();
+                var bookingsForJs = bookings.Select(b => new
+                {
+                    b.Id,
+                    b.CheckInDate,
+                    b.CheckOutDate,
+                    RoomPricePerNight = b.Room?.PricePerNight ?? 0
+                }).ToList();
+                ViewBag.BookingsForJs = bookingsForJs;
+
                 ViewData["BookingId"] = new SelectList(bookings.Select(b => new
                 {
                     Id = b.Id,
@@ -219,7 +264,7 @@ namespace HotelManagementSystem.Controllers
                 return View(invoice);
             }
 
-            // إذا كان النموذج صالحاً، تابع عملية الحفظ
+            // إذا كان النموذج صالحاً، تابع عملية الحفظ.
             Debug.WriteLine($"Invoice TotalAmount before saving in Create: {invoice.TotalAmount}");
             _context.Add(invoice);
             await _context.SaveChangesAsync();
@@ -228,6 +273,7 @@ namespace HotelManagementSystem.Controllers
         }
 
         // GET: Invoices/Edit/5
+        // يعرض نموذج تعديل فاتورة موجودة.
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -250,6 +296,24 @@ namespace HotelManagementSystem.Controllers
                                          .Include(b => b.Room)
                                          .ToListAsync();
 
+            // إعداد بيانات الحجوزات للـ JavaScript (لحساب الإجمالي من جانب العميل)
+            var bookingsForJs = bookings.Select(b => new
+            {
+                b.Id,
+                b.CheckInDate,
+                b.CheckOutDate,
+                RoomPricePerNight = b.Room?.PricePerNight ?? 0
+            }).ToList();
+            ViewBag.BookingsForJs = bookingsForJs;
+
+            // Debugging: Log bookingsForJs content
+            Debug.WriteLine("--- BookingsForJs (Edit GET) ---");
+            foreach (var b in bookingsForJs)
+            {
+                Debug.WriteLine($"BookingId: {b.Id}, CheckIn: {b.CheckInDate}, CheckOut: {b.CheckOutDate}, PricePerNight: {b.RoomPricePerNight}");
+            }
+            Debug.WriteLine("--------------------------------");
+
             ViewData["BookingId"] = new SelectList(bookings.Select(b => new
             {
                 Id = b.Id,
@@ -257,11 +321,23 @@ namespace HotelManagementSystem.Controllers
             }), "Id", "Display", invoice.BookingId);
 
             ViewData["CustomerId"] = new SelectList(_context.Customers, "Id", "FullName", invoice.CustomerId);
-            ViewBag.Services = _context.Services.Where(s => s.IsActive).ToList();
+
+            var services = _context.Services.Where(s => s.IsActive).ToList();
+            ViewBag.Services = services; // توفير قائمة الخدمات النشطة
+
+            // Debugging: Log services content
+            Debug.WriteLine("--- Services (Edit GET) ---");
+            foreach (var s in services)
+            {
+                Debug.WriteLine($"ServiceId: {s.Id}, Name: {s.Name}, UnitPrice: {s.UnitPrice}");
+            }
+            Debug.WriteLine("---------------------------");
+
             return View(invoice);
         }
 
         // POST: Invoices/Edit/5
+        // يستقبل بيانات الفاتورة المعدلة من النموذج ويقوم بحفظها.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,InvoiceNumber,InvoiceDate,DueDate,TotalAmount,PaidAmount,Status,BookingId,CustomerId,Notes,InvoiceItems")] Invoice invoice)
@@ -271,7 +347,8 @@ namespace HotelManagementSystem.Controllers
                 return NotFound();
             }
 
-            Debug.WriteLine("--- Raw Form Data for InvoiceItems (Edit) ---");
+            // Debugging: Check raw form data for InvoiceItems (useful for model binding issues).
+            Debug.WriteLine("--- Raw Form Data for InvoiceItems (Edit POST) ---");
             foreach (var key in Request.Form.Keys)
             {
                 if (key.StartsWith("InvoiceItems["))
@@ -281,20 +358,26 @@ namespace HotelManagementSystem.Controllers
             }
             Debug.WriteLine("------------------------------------");
 
-           
+            // 1. تعبئة سعر الوحدة (UnitPrice) لكل بند فاتورة من قاعدة البيانات.
+            // ومعالجة البنود غير الصالحة أو الفارغة.
             if (invoice.InvoiceItems != null && invoice.InvoiceItems.Any())
             {
                 var processedInvoiceItems = new List<InvoiceItem>();
-                var allServices = await _context.Services.ToListAsync(); 
+                var allServices = await _context.Services.ToListAsync(); // جلب جميع الخدمات مرة واحدة
 
                 for (int i = 0; i < invoice.InvoiceItems.Count; i++)
                 {
                     var item = invoice.InvoiceItems.ElementAt(i);
 
+                    // Debugging: Log item details received
+                    Debug.WriteLine($"Processing InvoiceItem[{i}]: ServiceId={item?.ServiceId}, Quantity={item?.Quantity}, UnitPrice={item?.UnitPrice}");
+
+                    // تحقق إضافي: إذا كان البند نفسه null أو ServiceId غير صالح، تخطاه أو أضف خطأ.
                     if (item == null || item.ServiceId <= 0)
                     {
                         ModelState.AddModelError($"InvoiceItems[{i}].ServiceId", "الخدمة المختارة غير صالحة أو مفقودة لهذا البند.");
-                        continue; 
+                        Debug.WriteLine($"  Error: ServiceId invalid or missing for item {i}. Skipping.");
+                        continue; // Skip this item and continue the loop
                     }
 
                     var service = allServices.FirstOrDefault(s => s.Id == item.ServiceId);
@@ -302,12 +385,15 @@ namespace HotelManagementSystem.Controllers
                     {
                         item.UnitPrice = service.UnitPrice;
                         processedInvoiceItems.Add(item);
+                        Debug.WriteLine($"  Service found. UnitPrice set to: {item.UnitPrice}");
                     }
                     else
                     {
                         ModelState.AddModelError($"InvoiceItems[{i}].ServiceId", "الخدمة المختارة غير موجودة في قاعدة البيانات.");
+                        Debug.WriteLine($"  Error: Service with ID {item.ServiceId} not found in DB.");
                     }
                 }
+                // الإصلاح الحاسم: استبدال المجموعة الأصلية بالمجموعة المعالجة.
                 invoice.InvoiceItems = processedInvoiceItems;
 
                 if (!invoice.InvoiceItems.Any())
@@ -319,27 +405,30 @@ namespace HotelManagementSystem.Controllers
             {
                 Debug.WriteLine("InvoiceItems collection is NULL or EMPTY after model binding in Edit POST action.");
             }
+
+            // حساب تكلفة الحجز.
             decimal bookingCost = 0;
             if (invoice.BookingId.HasValue)
             {
                 var booking = await _context.Bookings
-                                            .Include(b => b.Room) 
+                                            .Include(b => b.Room) // تأكد من تضمين الغرفة لجلب سعر الليلة
                                             .FirstOrDefaultAsync(b => b.Id == invoice.BookingId.Value);
                 if (booking != null)
                 {
-                    bookingCost = CalculateBookingCost(booking);
-                    Debug.WriteLine($"Calculated Booking Cost: {bookingCost}");
+                    bookingCost = CalculateBookingCost(booking); // استخدام الدالة المساعدة
+                    Debug.WriteLine($"Calculated Booking Cost (Server): {bookingCost}");
                 }
             }
+
+            // 2. إعادة حساب TotalAmount بناءً على بنود الفاتورة المستلمة + تكلفة الحجز.
             decimal invoiceItemsSum = 0;
-            
             if (invoice.InvoiceItems != null && invoice.InvoiceItems.Any())
             {
                 invoiceItemsSum = invoice.InvoiceItems.Sum(item => item.Quantity * item.UnitPrice);
             }
             invoice.TotalAmount = invoiceItemsSum + bookingCost;
 
-           
+            // 3. التحقق من صحة حالة النموذج.
             if (!ModelState.IsValid)
             {
                 Debug.WriteLine("ModelState is NOT valid in Edit POST action. Errors:");
@@ -355,10 +444,21 @@ namespace HotelManagementSystem.Controllers
                     }
                 }
 
+                // 7. إذا كان النموذج غير صالح، أعد تعبئة SelectLists و ViewBag.Services.
+                // إعادة تعبئة بيانات الحجوزات للـ JavaScript عند فشل التحقق.
                 var bookings = await _context.Bookings
                                              .Include(b => b.Customer)
                                              .Include(b => b.Room)
                                              .ToListAsync();
+                var bookingsForJs = bookings.Select(b => new
+                {
+                    b.Id,
+                    b.CheckInDate,
+                    b.CheckOutDate,
+                    RoomPricePerNight = b.Room?.PricePerNight ?? 0
+                }).ToList();
+                ViewBag.BookingsForJs = bookingsForJs;
+
                 ViewData["BookingId"] = new SelectList(bookings.Select(b => new
                 {
                     Id = b.Id,
@@ -370,11 +470,11 @@ namespace HotelManagementSystem.Controllers
                 return View(invoice);
             }
 
-            // إذا كان النموذج صالحاً، تابع عملية الحفظ
+            // إذا كان النموذج صالحاً، تابع عملية الحفظ.
             Debug.WriteLine($"Invoice TotalAmount before saving in Edit: {invoice.TotalAmount}");
             try
             {
-                // 4. جلب الفاتورة الموجودة من قاعدة البيانات مع بنودها
+                // 4. جلب الفاتورة الموجودة من قاعدة البيانات مع بنودها.
                 var existingInvoice = await _context.Invoices
                     .Include(i => i.InvoiceItems)
                     .FirstOrDefaultAsync(i => i.Id == id);
@@ -384,10 +484,10 @@ namespace HotelManagementSystem.Controllers
                     return NotFound();
                 }
 
-                // 5. تحديث خصائص الفاتورة الرئيسية
+                // 5. تحديث خصائص الفاتورة الرئيسية.
                 _context.Entry(existingInvoice).CurrentValues.SetValues(invoice);
 
-                // 6. التعامل مع بنود الفاتورة (إضافة، تعديل، حذف)
+                // 6. التعامل مع بنود الفاتورة (إضافة، تعديل، حذف).
                 var itemsToRemove = existingInvoice.InvoiceItems
                                                     .Where(existingItem => !invoice.InvoiceItems.Any(newItem => newItem.Id == existingItem.Id))
                                                     .ToList();
@@ -428,7 +528,7 @@ namespace HotelManagementSystem.Controllers
         }
 
         // GET: Invoices/Delete/5
-        // يعرض صفحة تأكيد حذف فاتورة
+        // يعرض صفحة تأكيد حذف فاتورة.
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -455,7 +555,7 @@ namespace HotelManagementSystem.Controllers
         }
 
         // POST: Invoices/Delete/5
-        // يقوم بحذف فاتورة مؤكدة
+        // يقوم بحذف فاتورة مؤكدة.
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -474,7 +574,7 @@ namespace HotelManagementSystem.Controllers
         }
 
         // GET: Invoices/Print/5
-        // يعرض الفاتورة بتنسيق مناسب للطباعة
+        // يعرض الفاتورة بتنسيق مناسب للطباعة.
         public async Task<IActionResult> Print(int? id)
         {
             if (id == null)
@@ -500,31 +600,27 @@ namespace HotelManagementSystem.Controllers
             return View(invoice);
         }
 
-        // دالة مساعدة للتحقق مما إذا كانت الفاتورة موجودة
+        // دالة مساعدة للتحقق مما إذا كانت الفاتورة موجودة.
         private bool InvoiceExists(int id)
         {
             return _context.Invoices.Any(e => e.Id == id);
         }
 
-        // دالة مساعدة لحساب تكلفة الحجز
+        // دالة مساعدة لحساب تكلفة الحجز.
         private decimal CalculateBookingCost(Booking booking)
         {
-            // تأكد من أن الحجز والغرفة موجودان وأن تواريخ الدخول والخروج صالحة
+            // تأكد من أن الحجز والغرفة موجودان وأن تواريخ الدخول والخروج صالحة.
             if (booking == null || booking.Room == null || booking.CheckInDate == default || booking.CheckOutDate == default)
             {
                 return 0;
             }
-
-            // حساب عدد الليالي
             int numberOfNights = (int)(booking.CheckOutDate - booking.CheckInDate).TotalDays;
 
-            // تأكد من أن عدد الليالي ليس سالباً
+            
             if (numberOfNights < 0)
             {
                 numberOfNights = 0;
             }
-
-            // سعر الحجز = سعر الليلة الواحدة * عدد الليالي
             return booking.Room.PricePerNight * numberOfNights;
         }
     }

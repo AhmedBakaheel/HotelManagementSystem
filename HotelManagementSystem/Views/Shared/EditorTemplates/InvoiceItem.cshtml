@@ -3,17 +3,14 @@
 @Html.HiddenFor(model => model.Id)
 @Html.HiddenFor(model => model.InvoiceId)
 
-
 <input type="hidden" name="InvoiceItems.Index" value="__INDEX__" />
 
 
 <div class="row invoice-item-row mb-2 border p-2 rounded">
     <div class="col-md-4">
         <div class="form-group">
-            <label asp-for="ServiceId" class="control-label"></label>
-            <select asp-for="ServiceId" class="form-control item-service-id"
-                    asp-items="@(new SelectList(ViewBag.Services, "Id", "Name"))">
-                <option value="">-- اختر خدمة --</option>
+            <label asp-for="ServiceId" class="control-label"></label> 
+            <select asp-for="ServiceId" class="form-control item-service-id">
             </select>
             <span asp-validation-for="ServiceId" class="text-danger"></span>
         </div>
@@ -35,7 +32,7 @@
     <div class="col-md-2">
         <div class="form-group">
             <label asp-for="Subtotal" class="control-label"></label>
-            <input asp-for="Subtotal" class="form-control item-subtotal" readonly />
+            <input asp-for="Subtotal" class="form-control item-subtotal" readonly /> 
         </div>
     </div>
     <div class="col-md-1 d-flex align-items-end">

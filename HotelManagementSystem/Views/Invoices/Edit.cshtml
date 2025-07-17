@@ -2,7 +2,6 @@
 @using HotelManagementSystem.Enums
 @using HotelManagementSystem.Models
 @using HotelManagementSystem.Extensions
-@using System.Linq
 
 @{
     ViewData["Title"] = "تعديل الفاتورة";
@@ -13,12 +12,19 @@
 <hr />
 <div class="row">
     <div class="col-md-8">
-        <form asp-action="Edit">
+        {{-- إضافة سمة data-services-json لتخزين بيانات الخدمات --}}
+        {{-- إضافة سمة data-bookings-json لتخزين بيانات الحجوزات --}}
+        {{-- <== جديد: إضافة سمة data-invoice-items-json لتخزين بنود الفاتورة الموجودة --}}
+        <form asp-action="Edit" id="invoiceForm"
+              data-services-json="@Html.Raw(Json.Serialize(ViewBag.Services))"
+              data-bookings-json="@Html.Raw(Json.Serialize(ViewBag.BookingsForJs))"
+              data-invoice-items-json="@Html.Raw(Json.Serialize(Model.InvoiceItems ?? new List<InvoiceItem>()))">
+            {{-- تأكد من تمرير قائمة حتى لو كانت فارغة --}}
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="InvoiceNumber" />
 
-           
+            {{-- حقول الفاتورة الرئيسية --}}
             <div class="form-group">
                 <label asp-for="InvoiceNumber" class="control-label"></label>
                 <p class="form-control-plaintext">@Model.InvoiceNumber</p>
@@ -60,9 +66,9 @@
                 <textarea asp-for="Notes" class="form-control"></textarea>
                 <span asp-validation-for="Notes" class="text-danger"></span>
             </div>
+
             <input type="hidden" asp-for="TotalAmount" id="TotalAmount" />
 
-            
             <div class="form-group">
                 <label class="control-label">المبلغ الإجمالي المحسوب:</label>
                 <span id="calculatedTotalDisplay" class="form-control-plaintext font-weight-bold text-primary">0.00</span>
@@ -71,13 +77,6 @@
             <hr />
             <h4>بنود الفاتورة</h4>
             <div id="invoiceItemsContainer">
-                @if (Model.InvoiceItems != null && Model.InvoiceItems.Any())
-                {
-                    @foreach (var item in Model.InvoiceItems)
-                    {
-                        @Html.EditorFor(modelItem => item)
-                    }
-                }
             </div>
             <button type="button" id="addInvoiceItemBtn" class="btn btn-secondary mb-3">إضافة بند جديد</button>
 
@@ -97,6 +96,7 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
+        {{-- Hidden template for an invoice item, uses a placeholder index --}}
     <div id="invoiceItemTemplate" style="display:none;">
         @{
             var dummyInvoiceItem = new HotelManagementSystem.Models.InvoiceItem();
@@ -108,21 +108,82 @@
 
     <script>
         $(document).ready(function () {
-            var itemIndex = @(Model.InvoiceItems != null ? Model.InvoiceItems.Count : 0);
+            var itemIndex = 0;
             var invoiceItemTemplateHtml = $('#invoiceItemTemplate').html();
 
-            var servicesData = @Html.Raw(Json.Serialize(ViewBag.Services));
+            var servicesData;
+            var bookingsData;
+            var existingInvoiceItemsData; 
 
-            function addInvoiceItemRow() {
+            try {
+                var servicesJsonString = $('#invoiceForm').data('services-json');
+                servicesData = JSON.parse(servicesJsonString);
+                console.log("Services Data Loaded (JS):", servicesData);
+            } catch (e) {
+                console.error("Error parsing servicesData from server:", e);
+                servicesData = [];
+            }
+
+            if (!Array.isArray(servicesData)) {
+                console.warn("servicesData was not an array, defaulting to empty array.");
+                servicesData = [];
+            }
+
+            try {
+                var bookingsJsonString = $('#invoiceForm').data('bookings-json');
+                bookingsData = JSON.parse(bookingsJsonString);
+                console.log("Bookings Data Loaded (JS):", bookingsData);
+            } catch (e) {
+                console.error("Error parsing bookingsData from server:", e);
+                bookingsData = [];
+            }
+
+            if (!Array.isArray(bookingsData)) {
+                console.warn("bookingsData was not an array, defaulting to empty array.");
+                bookingsData = [];
+            }
+
+            try {
+                var existingInvoiceItemsJsonString = $('#invoiceForm').data('invoice-items-json');
+                existingInvoiceItemsData = JSON.parse(existingInvoiceItemsJsonString);
+                console.log("Existing Invoice Items Data Loaded (JS):", existingInvoiceItemsData);
+            } catch (e) {
+                console.error("Error parsing existingInvoiceItemsData from server:", e);
+                existingInvoiceItemsData = [];
+            }
+
+            if (!Array.isArray(existingInvoiceItemsData)) {
+                console.warn("existingInvoiceItemsData was not an array, defaulting to empty array.");
+                existingInvoiceItemsData = [];
+            }
+
+            function addInvoiceItemRow(item = null) {
                 var newRowHtml = invoiceItemTemplateHtml;
                 newRowHtml = newRowHtml.replace(/__INDEX__/g, itemIndex);
+
                 $('#invoiceItemsContainer').append(newRowHtml);
+
+                // If an existing item is provided (for edit page), populate its data.
+                if (item) {
+                    // تأكد من أن أسماء الخصائص هنا تتطابق مع ما يتم إخراجه في JSON (عادةً camelCase)
+                    $('#InvoiceItems_' + itemIndex + '__ServiceId').val(item.serviceId);
+                    $('#InvoiceItems_' + itemIndex + '__Quantity').val(item.quantity);
+                    $('#InvoiceItems_' + itemIndex + '__UnitPrice').val(item.unitPrice);
+                    $('#InvoiceItems_' + itemIndex + '__Subtotal').val((item.quantity * item.unitPrice).toFixed(2));
+                    $('#InvoiceItems_' + itemIndex + '__Id').val(item.id);
+                    $('#InvoiceItems_' + itemIndex + '__InvoiceId').val(item.invoiceId);
+                }
 
                 itemIndex++;
             }
 
-           
-            if ($('#invoiceItemsContainer').children().length === 0) {
+            // <== جديد: إضافة البنود الموجودة عند تحميل صفحة التعديل باستخدام JavaScript
+            if (existingInvoiceItemsData.length > 0) {
+                existingInvoiceItemsData.forEach(function(item) {
+                    addInvoiceItemRow(item);
+                });
+            } else {
+                // أضف بنداً فارغاً واحداً إذا لم تكن هناك بنود موجودة
                 addInvoiceItemRow();
             }
 
@@ -139,7 +200,12 @@
                 var selectedServiceId = $(this).val();
                 var $unitPriceInput = $(this).closest('.invoice-item-row').find('.item-unit-price');
 
+                console.log("Selected Service ID:", selectedServiceId);
+                console.log("Current servicesData:", servicesData);
+
                 var service = servicesData.find(s => s.id == selectedServiceId);
+                console.log("Found Service:", service);
+
                 if (service) {
                     $unitPriceInput.val(service.unitPrice.toFixed(2));
                 } else {
@@ -148,8 +214,31 @@
                 calculateTotalAmount();
             });
 
+            // Listen for changes on the BookingId dropdown.
+            $('#BookingId').on('change', function() {
+                calculateTotalAmount();
+            });
+
             function calculateTotalAmount() {
                 let totalAmount = 0;
+                let bookingCost = 0;
+
+                // Calculate booking cost from JavaScript.
+                var selectedBookingId = $('#BookingId').val();
+                if (selectedBookingId) {
+                    var booking = bookingsData.find(b => b.id == selectedBookingId);
+                    if (booking && booking.checkInDate && booking.checkOutDate && booking.roomPricePerNight !== undefined) {
+                        var checkIn = new Date(booking.checkInDate);
+                        var checkOut = new Date(booking.checkOutDate);
+                        var timeDiff = Math.abs(checkOut.getTime() - checkIn.getTime());
+                        var numberOfNights = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                        if (numberOfNights < 0) numberOfNights = 0;
+                        bookingCost = booking.roomPricePerNight * numberOfNights;
+                        console.log("Calculated Booking Cost (JS):", bookingCost);
+                    }
+                }
+                totalAmount += bookingCost;
+
                 $('#invoiceItemsContainer .invoice-item-row').each(function () {
                     var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
                     var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
@@ -159,12 +248,12 @@
                     totalAmount += subtotal;
                 });
                 $('#TotalAmount').val(totalAmount.toFixed(2));
-                $('#calculatedTotalDisplay').text(totalAmount.toFixed(2)); 
+                $('#calculatedTotalDisplay').text(totalAmount.toFixed(2));
             }
 
             $('#invoiceItemsContainer').on('input', '.item-quantity, .item-unit-price', calculateTotalAmount);
 
-            calculateTotalAmount();
+            calculateTotalAmount(); // Initial calculation on page load.
         });
     </script>
 }
