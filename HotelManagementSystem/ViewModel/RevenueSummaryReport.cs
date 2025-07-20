@@ -9,6 +9,7 @@ namespace HotelManagementSystem.ViewModel
         public decimal TotalOverallRevenue { get; set; }
         public decimal TotalBookingRevenue { get; set; }
         public decimal TotalServiceRevenue { get; set; }
+        public decimal TotalOutstandingAmount { get; set; }
         public List<Invoice> InvoicesIncluded { get; set; } = new List<Invoice>();
     }
 }

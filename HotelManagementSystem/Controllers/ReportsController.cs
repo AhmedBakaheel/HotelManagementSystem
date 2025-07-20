@@ -21,10 +21,11 @@ namespace HotelManagementSystem.Controllers
         }
 
        
-
         // GET: Reports/RevenueSummary
+       
         public IActionResult RevenueSummary()
         {
+          
             var viewModel = new RevenueSummaryReportViewModel
             {
                 StartDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1),
@@ -34,11 +35,11 @@ namespace HotelManagementSystem.Controllers
         }
 
         // POST: Reports/RevenueSummary
+       
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RevenueSummary(RevenueSummaryReportViewModel viewModel)
         {
-           
             Debug.WriteLine($"--- Report Request ---");
             Debug.WriteLine($"StartDate received: {viewModel.StartDate}");
             Debug.WriteLine($"EndDate received: {viewModel.EndDate}");
@@ -46,17 +47,19 @@ namespace HotelManagementSystem.Controllers
 
             if (ModelState.IsValid)
             {
+               
                 if (viewModel.StartDate > viewModel.EndDate)
                 {
                     ModelState.AddModelError("", "تاريخ البدء لا يمكن أن يكون بعد تاريخ الانتهاء.");
                     return View(viewModel);
                 }
 
-                
+              
                 var adjustedEndDate = viewModel.EndDate.Date.AddDays(1).AddTicks(-1);
 
                 Debug.WriteLine($"Adjusted EndDate for query: {adjustedEndDate}");
 
+               
                 var invoices = await _context.Invoices
                     .Include(i => i.Booking)
                         .ThenInclude(b => b.Room)
@@ -65,7 +68,6 @@ namespace HotelManagementSystem.Controllers
                     .Where(i => i.InvoiceDate >= viewModel.StartDate && i.InvoiceDate <= adjustedEndDate)
                     .ToListAsync();
 
-                
                 Debug.WriteLine($"Number of invoices fetched: {invoices.Count}");
                 if (invoices.Any())
                 {
@@ -78,11 +80,13 @@ namespace HotelManagementSystem.Controllers
                 viewModel.TotalOverallRevenue = 0;
                 viewModel.TotalBookingRevenue = 0;
                 viewModel.TotalServiceRevenue = 0;
+                viewModel.TotalOutstandingAmount = 0; 
 
                 foreach (var invoice in invoices)
                 {
                     viewModel.TotalOverallRevenue += invoice.TotalAmount;
 
+                   
                     if (invoice.Booking != null)
                     {
                         if (invoice.Booking.Room != null)
@@ -93,10 +97,13 @@ namespace HotelManagementSystem.Controllers
                         }
                     }
 
+                   
                     if (invoice.InvoiceItems != null)
                     {
                         viewModel.TotalServiceRevenue += invoice.InvoiceItems.Sum(item => item.Quantity * item.UnitPrice);
                     }
+
+                    viewModel.TotalOutstandingAmount += invoice.RemainingAmount; 
                 }
             }
             return View(viewModel);
