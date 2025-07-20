@@ -204,17 +204,15 @@ namespace HotelManagementSystem.Controllers
             if (invoice.BookingId.HasValue)
             {
                 var booking = await _context.Bookings
-                                            .Include(b => b.Room) // تأكد من تضمين الغرفة لجلب سعر الليلة
+                                            .Include(b => b.Room) 
                                             .FirstOrDefaultAsync(b => b.Id == invoice.BookingId.Value);
                 if (booking != null)
                 {
-                    bookingCost = CalculateBookingCost(booking); // استخدام الدالة المساعدة
+                    bookingCost = CalculateBookingCost(booking); 
                     Debug.WriteLine($"Calculated Booking Cost (Server): {bookingCost}");
                 }
             }
 
-            // 3. إعادة حساب TotalAmount بناءً على بنود الفاتورة المستلمة + تكلفة الحجز.
-            // هذا الشرط والـ Sum يعملان الآن على المجموعة المعالجة والصالحة.
             decimal invoiceItemsSum = 0;
             if (invoice.InvoiceItems != null && invoice.InvoiceItems.Any())
             {
@@ -238,8 +236,6 @@ namespace HotelManagementSystem.Controllers
                     }
                 }
 
-                // 5. إذا كان النموذج غير صالح، أعد تعبئة SelectLists و ViewBag.Services.
-                // إعادة تعبئة بيانات الحجوزات للـ JavaScript عند فشل التحقق.
                 var bookings = await _context.Bookings
                                              .Include(b => b.Customer)
                                              .Include(b => b.Room)
