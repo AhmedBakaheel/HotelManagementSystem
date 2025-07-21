@@ -108,5 +108,100 @@ namespace HotelManagementSystem.Controllers
             }
             return View(viewModel);
         }
+
+        // GET: Reports/OutstandingPayments
+        // Displays the form for the Outstanding Payments Report
+        public IActionResult OutstandingPayments()
+        {
+            var viewModel = new OutstandingPaymentsReportViewModel
+            {
+                ReportDate = DateTime.Now.Date // Default to today's date
+            };
+            return View(viewModel);
+        }
+
+        // POST: Reports/OutstandingPayments
+        // Processes the request and calculates outstanding amounts
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OutstandingPayments(OutstandingPaymentsReportViewModel viewModel)
+        {
+            Debug.WriteLine($"--- Outstanding Payments Report Request ---");
+            Debug.WriteLine($"ReportDate received: {viewModel.ReportDate}");
+            Debug.WriteLine($"-----------------------------------------");
+
+            if (ModelState.IsValid)
+            {
+                // Fetch all invoices with remaining amount > 0
+                // Include Customer for display purposes
+                var outstandingInvoices = await _context.Invoices
+                    .Include(i => i.Customer)
+                    .Where(i => i.RemainingAmount > 0)
+                    .ToListAsync();
+
+                viewModel.OutstandingInvoices = new List<OutstandingInvoice>();
+                viewModel.Current = 0;
+                viewModel.Days1_30 = 0;
+                viewModel.Days31_60 = 0;
+                viewModel.Days61_90 = 0;
+                viewModel.Days90Plus = 0;
+                viewModel.TotalOutstanding = 0;
+
+                foreach (var invoice in outstandingInvoices)
+                {
+                    var daysOverdue = (int)(viewModel.ReportDate - invoice.DueDate).TotalDays;
+
+                    var outstandingItem = new OutstandingInvoice
+                    {
+                        InvoiceId = invoice.Id,
+                        InvoiceNumber = invoice.InvoiceNumber,
+                        CustomerName = invoice.Customer?.FullName ?? "غير معروف",
+                        InvoiceDate = invoice.InvoiceDate,
+                        DueDate = invoice.DueDate,
+                        TotalAmount = invoice.TotalAmount,
+                        PaidAmount = invoice.PaidAmount,
+                        RemainingAmount = invoice.RemainingAmount,
+                        DaysOverdue = daysOverdue > 0 ? daysOverdue : 0 // Only positive days overdue
+                    };
+
+                    viewModel.OutstandingInvoices.Add(outstandingItem);
+                    viewModel.TotalOutstanding += invoice.RemainingAmount;
+
+                    // Categorize into aging buckets
+                    if (daysOverdue <= 0) // Not yet due or due today
+                    {
+                        viewModel.Current += invoice.RemainingAmount;
+                    }
+                    else if (daysOverdue >= 1 && daysOverdue <= 30)
+                    {
+                        viewModel.Days1_30 += invoice.RemainingAmount;
+                    }
+                    else if (daysOverdue >= 31 && daysOverdue <= 60)
+                    {
+                        viewModel.Days31_60 += invoice.RemainingAmount;
+                    }
+                    else if (daysOverdue >= 61 && daysOverdue <= 90)
+                    {
+                        viewModel.Days61_90 += invoice.RemainingAmount;
+                    }
+                    else // More than 90 days overdue
+                    {
+                        viewModel.Days90Plus += invoice.RemainingAmount;
+                    }
+                }
+
+                // Sort invoices by DueDate for better readability
+                viewModel.OutstandingInvoices = viewModel.OutstandingInvoices.OrderBy(oi => oi.DueDate).ToList();
+
+                Debug.WriteLine($"Total Outstanding: {viewModel.TotalOutstanding}");
+                Debug.WriteLine($"Current: {viewModel.Current}");
+                Debug.WriteLine($"1-30 Days: {viewModel.Days1_30}");
+                Debug.WriteLine($"31-60 Days: {viewModel.Days31_60}");
+                Debug.WriteLine($"61-90 Days: {viewModel.Days61_90}");
+                Debug.WriteLine($"90+ Days: {viewModel.Days90Plus}");
+            }
+
+            return View(viewModel);
+        }
     }
 }

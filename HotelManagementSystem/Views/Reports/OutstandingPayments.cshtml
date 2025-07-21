@@ -1,0 +1,139 @@
+﻿@model HotelManagementSystem.ViewModel.OutstandingPaymentsReportViewModel
+@using HotelManagementSystem.Models
+@using HotelManagementSystem.Extensions
+
+@{
+    ViewData["Title"] = "تقرير الدفعات المعلقة";
+}
+
+<h1>تقرير الدفعات المعلقة</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="OutstandingPayments" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="ReportDate" class="control-label"></label>
+                <input asp-for="ReportDate" type="date" class="form-control" />
+                <span asp-validation-for="ReportDate" class="text-danger"></span>
+            </div>
+            <div class="form-group mt-3">
+                <input type="submit" value="إنشاء التقرير" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.ReportDate != default(DateTime))
+{
+    <hr />
+    <h2>ملخص الدفعات المعلقة حتى تاريخ: @Model.ReportDate.ToShortDateString()</h2>
+
+    <div class="row">
+        <div class="col-md-2">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">غير مستحق / مستحق اليوم</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.Current.ToString("C")</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">1-30 يوم</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.Days1_30.ToString("C")</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-header">31-60 يوم</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.Days31_60.ToString("C")</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-header">61-90 يوم</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.Days61_90.ToString("C")</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-dark mb-3">
+                <div class="card-header">أكثر من 90 يوم</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.Days90Plus.ToString("C")</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">إجمالي الدفعات المعلقة</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.TotalOutstanding.ToString("C")</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.OutstandingInvoices.Any())
+    {
+        <h3>الفواتير المعلقة:</h3>
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>رقم الفاتورة</th>
+                    <th>العميل</th>
+                    <th>تاريخ الفاتورة</th>
+                    <th>تاريخ الاستحقاق</th>
+                    <th>المبلغ الإجمالي</th>
+                    <th>المبلغ المدفوع</th>
+                    <th>المبلغ المتبقي</th>
+                    <th>أيام التأخير</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.OutstandingInvoices)
+                {
+                    <tr>
+                        <td>@item.InvoiceNumber</td>
+                        <td>@item.CustomerName</td>
+                        <td>@item.InvoiceDate.ToShortDateString()</td>
+                        <td>@item.DueDate.ToShortDateString()</td>
+                        <td>@item.TotalAmount.ToString("C")</td>
+                        <td>@item.PaidAmount.ToString("C")</td>
+                        <td>@item.RemainingAmount.ToString("C")</td>
+                        <td>
+                            @if (item.DaysOverdue > 0)
+                            {
+                                <span class="badge badge-danger">@item.DaysOverdue يوم</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-success">غير مستحق بعد</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info mt-3" role="alert">
+            لا توجد فواتير معلقة ضمن الفترة الزمنية المحددة.
+        </div>
+    }
+}
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
