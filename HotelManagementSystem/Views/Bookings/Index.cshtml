@@ -1,23 +1,19 @@
 ﻿@model IEnumerable<HotelManagementSystem.Models.Booking>
-
+@using HotelManagementSystem.Enums
+@using HotelManagementSystem.Models
+@using HotelManagementSystem.Extensions 
 @{
-    ViewData["Title"] = "إدارة الحجوزات";
+    ViewData["Title"] = "الحجوزات";
 }
 
-<h1>إدارة الحجوزات</h1>
+<h1>الحجوزات</h1>
 
 <p>
-    <a asp-action="Create" class="btn btn-primary">إضافة حجز جديد</a>
+    <a asp-action="Create">إنشاء حجز جديد</a>
 </p>
 <table class="table">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Room)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Customer)
-            </th>
             <th>
                 @Html.DisplayNameFor(model => model.CheckInDate)
             </th>
@@ -25,48 +21,52 @@
                 @Html.DisplayNameFor(model => model.CheckOutDate)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.TotalAmount)
+                @Html.DisplayNameFor(model => model.Status) 
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.BookingDate)
+                @Html.DisplayNameFor(model => model.Room)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Status)
+                @Html.DisplayNameFor(model => model.Customer)
             </th>
+            @* <th>
+                @Html.DisplayNameFor(model => model.Notes)
+            </th> *@
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Room.RoomNumber)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Customer.FirstName) @Html.DisplayFor(modelItem => item.Customer.LastName)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CheckInDate)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CheckOutDate)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.TotalAmount)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.BookingDate)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Status)
-                </td>
-                <td>
-                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">تعديل</a> |
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">تفاصيل</a> |
-                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm">حذف</a>
-                </td>
-            </tr>
-        }
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.CheckInDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CheckOutDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Status) 
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Room.RoomNumber)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Customer.FullName)
+            </td>
+           @*  <td>
+                @Html.DisplayFor(modelItem => item.Notes)
+            </td> *@
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">تفاصيل</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">حذف</a>
+                @if (item.Status != BookingStatus.Cancelled && item.Status != BookingStatus.CheckedOut) 
+                {
+                    <span> | </span>
+                    <a asp-action="Cancel" asp-route-id="@item.Id" class="text-danger">إلغاء</a>
+                }
+            </td>
+        </tr>
+}
     </tbody>
 </table>
