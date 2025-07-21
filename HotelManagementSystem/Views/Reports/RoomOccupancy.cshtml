@@ -1,0 +1,101 @@
+﻿@model HotelManagementSystem.ViewModel.RoomOccupancyReportViewModel
+
+@{
+    ViewData["Title"] = "تقرير إشغال الغرف";
+}
+
+<h1>تقرير إشغال الغرف</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="RoomOccupancy" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="StartDate" class="control-label"></label>
+                <input asp-for="StartDate" type="date" class="form-control" />
+                <span asp-validation-for="StartDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="EndDate" class="control-label"></label>
+                <input asp-for="EndDate" type="date" class="form-control" />
+                <span asp-validation-for="EndDate" class="text-danger"></span>
+            </div>
+            <div class="form-group mt-3">
+                <input type="submit" value="إنشاء التقرير" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.StartDate != default(DateTime))
+{
+    <hr />
+    <h2>نتائج التقرير للفترة من @Model.StartDate.ToShortDateString() إلى @Model.EndDate.ToShortDateString()</h2>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">إجمالي الليالي المتاحة</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.TotalAvailableNights</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">إجمالي الليالي المحجوزة</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.TotalBookedNights</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">نسبة الإشغال الكلية</div>
+                <div class="card-body">
+                    <h5 class="card-title">@Model.OccupancyRate.ToString("F2")%</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.RoomDetails.Any())
+    {
+        <h3>تفاصيل الإشغال لكل غرفة:</h3>
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>رقم الغرفة</th>
+                    <th>الليالي المتاحة</th>
+                    <th>الليالي المحجوزة</th>
+                    <th>نسبة الإشغال</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var roomDetail in Model.RoomDetails)
+                {
+                    <tr>
+                        <td>@roomDetail.RoomNumber</td>
+                        <td>@roomDetail.RoomAvailableNights</td>
+                        <td>@roomDetail.RoomBookedNights</td>
+                        <td>@roomDetail.RoomOccupancyRate.ToString("F2")%</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info mt-3" role="alert">
+            لا توجد بيانات إشغال للغرف ضمن الفترة الزمنية المحددة.
+        </div>
+    }
+}
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
