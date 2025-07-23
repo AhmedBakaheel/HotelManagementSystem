@@ -1,53 +1,69 @@
-﻿using HotelManagementSystem.Enums;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Collections.Generic; // Required for ICollection
+using Microsoft.AspNetCore.Identity;
+using HotelManagementSystem.Enums; // Assuming ApplicationUser is from Identity
 
 namespace HotelManagementSystem.Models
 {
-   
-
     public class Booking
     {
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "تاريخ الدخول مطلوب.")]
-        [Display(Name = "تاريخ الدخول")]
-        [DataType(DataType.Date)] // يحدد نوع البيانات كتاريخ فقط
+        [Required(ErrorMessage = "Check-in date is required.")]
+        [Display(Name = "Check-in Date")]
+        [DataType(DataType.Date)]
         public DateTime CheckInDate { get; set; }
 
-        [Required(ErrorMessage = "تاريخ المغادرة مطلوب.")]
-        [Display(Name = "تاريخ المغادرة")]
+        [Required(ErrorMessage = "Check-out date is required.")]
+        [Display(Name = "Check-out Date")]
         [DataType(DataType.Date)]
         public DateTime CheckOutDate { get; set; }
 
-        [Required(ErrorMessage = "المبلغ الإجمالي مطلوب.")]
-        [Column(TypeName = "decimal(18, 2)")]
-        [Display(Name = "المبلغ الإجمالي")]
-        public decimal TotalAmount { get; set; }
+        [Required(ErrorMessage = "Room ID is required.")]
+        [Display(Name = "Room")]
+        public int RoomId { get; set; }
 
-        [Display(Name = "تاريخ الحجز")]
-        public DateTime BookingDate { get; set; } = DateTime.Now; 
+        [ForeignKey("RoomId")]
+        public virtual Room? Room { get; set; } // Room navigation property
 
-        [Display(Name = "حالة الحجز")]
+        [Required(ErrorMessage = "Customer ID is required.")]
+        [Display(Name = "Customer")]
+        public int CustomerId { get; set; }
+
+        [ForeignKey("CustomerId")]
+        public virtual Customer? Customer { get; set; } // Customer navigation property
+
+        [Display(Name = "Booking Notes")]
+        [StringLength(500, ErrorMessage = "Notes cannot exceed 500 characters.")]
+        public string? Notes { get; set; }
+
+        [Required(ErrorMessage = "Booking status is required.")]
+        [Display(Name = "Booking Status")]
         public BookingStatus Status { get; set; } = BookingStatus.Pending;
 
-        // مفتاح خارجي للغرفة
-        [Required(ErrorMessage = "يجب تحديد الغرفة.")]
-        [Display(Name = "الغرفة")]
-        public int RoomId { get; set; }
-        [ForeignKey("RoomId")] 
-        public Room? Room { get; set; } 
+        [Display(Name = "Total Amount")]
+        [Column(TypeName = "decimal(18, 2)")]
+        [Range(0.00, double.MaxValue, ErrorMessage = "Total amount cannot be negative.")]
+        public decimal TotalAmount { get; set; } = 0;
 
-        // مفتاح خارجي للعميل
-        [Required(ErrorMessage = "يجب تحديد العميل.")]
-        [Display(Name = "العميل")]
-        public int CustomerId { get; set; }
-        [ForeignKey("CustomerId")]
-        public Customer? Customer { get; set; }
-        public string? ApplicationUserId { get; set; } 
+        // <== جديد: تمت إعادة إضافة خاصية تاريخ الحجز
+        [Required(ErrorMessage = "Booking date is required.")]
+        [Display(Name = "Booking Date")]
+        [DataType(DataType.Date)]
+        public DateTime BookingDate { get; set; } = DateTime.Now;
+
+        // <== جديد: تمت إعادة إضافة خصائص المستخدم المرتبطة
+        // Assuming ApplicationUser is your Identity user model
+        [Display(Name = "Application User")]
+        public string? ApplicationUserId { get; set; } // Foreign key to ApplicationUser
+
         [ForeignKey("ApplicationUserId")]
-        public ApplicationUser? ApplicationUser { get; set; } 
+        public virtual ApplicationUser? ApplicationUser { get; set; } // Navigation property to ApplicationUser
 
+        // Navigation property for related invoices (one-to-many)
+        public virtual ICollection<Invoice>? Invoices { get; set; }
     }
 }

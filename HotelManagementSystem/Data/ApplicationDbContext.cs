@@ -17,7 +17,7 @@ namespace HotelManagementSystem.Data
             base.OnModelCreating(builder);
 
             builder.Entity<Booking>()
-           .HasOne(b => b.ApplicationUser)
+         .HasOne(b => b.ApplicationUser)
            .WithMany() 
            .HasForeignKey(b => b.ApplicationUserId)
            .OnDelete(DeleteBehavior.Restrict); 

@@ -31,6 +31,8 @@ namespace HotelManagementSystem.Models
         [Display(Name = "الوصف")]
         [StringLength(500, ErrorMessage = "الوصف لا يمكن أن يتجاوز 500 حرف.")]
         public string? Description { get; set; }
+        [Display(Name = "نشطة")] 
+        public bool IsActive { get; set; } = true;
 
         [NotMapped]
         public IEnumerable<SelectListItem> RoomTypeOptions { get; set; }

@@ -197,7 +197,7 @@ namespace HotelManagementSystem.Controllers
             var booking = await _context.Bookings
                 .Include(b => b.Room)
                 .Include(b => b.Customer)
-                .Include(b => b.ApplicationUser)
+               .Include(b => b.ApplicationUser)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (booking == null)

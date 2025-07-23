@@ -4,6 +4,7 @@ using HotelManagementSystem.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HotelManagementSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250723081703_AddIsActiveToRoom")]
+    partial class AddIsActiveToRoom
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -115,10 +118,6 @@ namespace HotelManagementSystem.Migrations
 
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("RoomId")
                         .HasColumnType("int");
@@ -507,7 +506,7 @@ namespace HotelManagementSystem.Migrations
             modelBuilder.Entity("HotelManagementSystem.Models.Invoice", b =>
                 {
                     b.HasOne("HotelManagementSystem.Models.Booking", "Booking")
-                        .WithMany("Invoices")
+                        .WithMany()
                         .HasForeignKey("BookingId");
 
                     b.HasOne("HotelManagementSystem.Models.Customer", "Customer")
@@ -598,11 +597,6 @@ namespace HotelManagementSystem.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("HotelManagementSystem.Models.Booking", b =>
-                {
-                    b.Navigation("Invoices");
                 });
 
             modelBuilder.Entity("HotelManagementSystem.Models.Customer", b =>
