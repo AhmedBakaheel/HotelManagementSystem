@@ -1,7 +1,7 @@
 ﻿@model HotelManagementSystem.Models.Booking
 @using HotelManagementSystem.Enums
 @using HotelManagementSystem.Models
-@using HotelManagementSystem.Extensions 
+@using HotelManagementSystem.Extensions // لكي نستخدم GetDisplayName()
 
 @{
     ViewData["Title"] = "تفاصيل الحجز";
@@ -12,7 +12,7 @@
 <div>
     <h4>الحجز</h4>
     <hr />
-    {{-- عرض رسائل النجاح أو الخطأ --}}
+   
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success" role="alert">
@@ -40,7 +40,7 @@
             @Html.DisplayFor(model => model.CheckOutDate)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Status) 
+            @Html.DisplayNameFor(model => model.Status)
         </dt>
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Status)
@@ -57,20 +57,42 @@
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Customer.FullName)
         </dd>
-       @*  <dt class="col-sm-2">
+        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Notes)
         </dt>
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Notes)
-        </dd> *@
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.TotalAmount)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.TotalAmount)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.BookingDate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.BookingDate)
+        </dd>
     </dl>
 </div>
 <div>
     <a asp-action="Edit" asp-route-id="@Model.Id">تعديل</a> |
     <a asp-action="Index">العودة إلى القائمة</a>
-    @if (Model.Status != BookingStatus.Cancelled && Model.Status != BookingStatus.CheckedOut) 
+    @if (Model.Status == BookingStatus.Pending || Model.Status == BookingStatus.Confirmed)
     {
-    <span> | </span>
-    <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-danger">إلغاء الحجز</a>
+        <span> | </span>
+        <a asp-action="CheckIn" asp-route-id="@Model.Id" class="btn btn-success">تسجيل الدخول</a>
+    }
+    @if (Model.Status == BookingStatus.CheckedIn)
+    {
+        <span> | </span>
+        <a asp-action="CheckOut" asp-route-id="@Model.Id" class="btn btn-primary">تسجيل المغادرة</a>
+    }
+    @if (Model.Status != BookingStatus.Cancelled && Model.Status != BookingStatus.CheckedOut)
+    {
+        <span> | </span>
+        <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-danger">إلغاء الحجز</a>
     }
 </div>
