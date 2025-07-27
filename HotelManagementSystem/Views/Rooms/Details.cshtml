@@ -7,6 +7,7 @@
 <h1>تفاصيل الغرفة</h1>
 
 <div>
+    <h4>غرفة</h4>
     <hr />
     <dl class="row">
         <dt class="col-sm-2">
@@ -28,20 +29,40 @@
             @Html.DisplayFor(model => model.PricePerNight)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Status)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Status)
-        </dd>
-        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Description)
         </dt>
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Description)
         </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.MaxGuests)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.MaxGuests)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.IsActive)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.IsActive)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.ImageUrl)
+        </dt>
+        <dd class="col-sm-10">
+            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+            {
+                <img src="@Model.ImageUrl" alt="صورة الغرفة" style="max-width: 300px; height: auto; border-radius: 8px;"
+                     onerror="this.onerror=null;this.src='https://placehold.co/300x200/E0E0E0/ADADAD?text=لا توجد صورة';" />
+            }
+            else
+            {
+                <span>لا توجد صورة</span>
+            }
+        </dd>
     </dl>
 </div>
 <div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-warning">تعديل</a> |
+    <a asp-action="Edit" asp-route-id="@Model?.Id">تعديل</a> |
     <a asp-action="Index">العودة إلى القائمة</a>
 </div>

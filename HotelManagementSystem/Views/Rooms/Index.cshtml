@@ -1,60 +1,79 @@
 ﻿@model IEnumerable<HotelManagementSystem.Models.Room>
 
 @{
-    ViewData["Title"] = "إدارة الغرف";
+    ViewData["Title"] = "الغرف";
 }
 
-<h1>إدارة الغرف</h1>
+<h1>الغرف</h1>
 
 <p>
-    <a asp-action="Create" class="btn btn-primary">إضافة غرفة جديدة</a>
+    <a asp-action="Create">إنشاء غرفة جديدة</a>
 </p>
 <table class="table">
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.RoomNumber)
+               رقمها
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.RoomType)
+               نوع الغرفة
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.PricePerNight)
+               سعر اليلة
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Status)
+                الوصف
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Description)
+               سعه الغرفة
+            </th>
+            <th>
+               متوفرة
+            </th>
+            <th>
+                الصورة
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.RoomNumber)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.RoomType)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PricePerNight)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Status)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Description)
-                </td>
-                <td>
-                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">تعديل</a> |
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">تفاصيل</a> |
-                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm">حذف</a>
-                </td>
-            </tr>
-        }
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.RoomNumber)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RoomType)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PricePerNight)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Description)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MaxGuests)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IsActive)
+            </td>
+            <td>
+                @if (!string.IsNullOrEmpty(item.ImageUrl))
+                {
+                    <img src="@item.ImageUrl" alt="صورة الغرفة" style="width: 100px; height: auto; border-radius: 8px;" 
+                         onerror="this.onerror=null;this.src='https://placehold.co/100x75/E0E0E0/ADADAD?text=لا توجد صورة';" />
+                }
+                else
+                {
+                    <span>لا توجد صورة</span>
+                }
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">تفاصيل</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">حذف</a>
+            </td>
+        </tr>
+}
     </tbody>
 </table>

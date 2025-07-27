@@ -1,5 +1,5 @@
-﻿@using HotelManagementSystem.Enums
-@model HotelManagementSystem.Models.Room
+﻿@model HotelManagementSystem.Models.Room
+@using HotelManagementSystem.Enums; 
 
 @{
     ViewData["Title"] = "تعديل الغرفة";
@@ -7,20 +7,21 @@
 
 <h1>تعديل الغرفة</h1>
 
+<h4>غرفة</h4>
 <hr />
 <div class="row">
     <div class="col-md-4">
-        <form asp-action="Edit">
+        <form asp-action="Edit" enctype="multipart/form-data">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" /> 
+            <input type="hidden" asp-for="Id" />
             <div class="form-group">
                 <label asp-for="RoomNumber" class="control-label"></label>
-                <input asp-for="RoomNumber" class="form-control" />
+                <input asp-for="RoomNumber" class="form-control" readonly />
                 <span asp-validation-for="RoomNumber" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="RoomType" class="control-label"></label>
-                <input asp-for="RoomType" class="form-control" />
+                <select asp-for="RoomType" asp-items="Html.GetEnumSelectList<RoomType>()" class="form-control"></select>
                 <span asp-validation-for="RoomType" class="text-danger"></span>
             </div>
             <div class="form-group">
@@ -29,15 +30,32 @@
                 <span asp-validation-for="PricePerNight" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Status" class="control-label"></label>
-                <select asp-for="Status" asp-items="Html.GetEnumSelectList<RoomStatus>()" class="form-control"></select>
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
-            <div class="form-group">
                 <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
+                <textarea asp-for="Description" class="form-control"></textarea>
                 <span asp-validation-for="Description" class="text-danger"></span>
             </div>
+            <div class="form-group">
+                <label asp-for="MaxGuests" class="control-label"></label>
+                <input asp-for="MaxGuests" class="form-control" />
+                <span asp-validation-for="MaxGuests" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="IsActive" /> @Html.DisplayNameFor(model => model.IsActive)
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="RoomImageFile" class="control-label">صورة الغرفة</label>
+                <input type="file" id="RoomImageFile" name="RoomImageFile" class="form-control" accept="image/*" />
+                <span class="text-danger" id="RoomImageFileValidation"></span>
+                <input type="hidden" asp-for="ImageUrl" />
+            </div>
+            <div class="form-group mt-2">
+                <img id="imagePreview" src="@(!string.IsNullOrEmpty(Model.ImageUrl) ? Model.ImageUrl : "https://placehold.co/300x200/E0E0E0/ADADAD?text=لا توجد صورة")"
+                     alt="معاينة الصورة" style="max-width: 300px; height: auto; border-radius: 8px; display: block;"
+                     onerror="this.onerror=null;this.src='https://placehold.co/300x200/E0E0E0/ADADAD?text=فشل تحميل الصورة';" />
+            </div>
+
             <div class="form-group mt-3">
                 <input type="submit" value="حفظ" class="btn btn-primary" />
             </div>
@@ -53,4 +71,43 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        $(document).ready(function () {
+            $('#RoomImageFile').change(function () {
+                const file = this.files[0];
+                const fileValidationSpan = $('#RoomImageFileValidation');
+                const imagePreview = $('#imagePreview');
+
+                fileValidationSpan.text('');
+
+                if (file) {
+                    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                    if (!allowedTypes.includes(file.type)) {
+                        fileValidationSpan.text('الرجاء اختيار ملف صورة صالح (jpeg, png, gif, webp).');
+                        imagePreview.attr('src', 'https://placehold.co/300x200/E0E0E0/ADADAD?text=نوع ملف غير صالح');
+                        $(this).val('');
+                        return;
+                    }
+
+                    const maxSize = 5 * 1024 * 1024;
+                    if (file.size > maxSize) {
+                        fileValidationSpan.text('حجم الملف كبير جداً (الحد الأقصى 5MB).');
+                        imagePreview.attr('src', 'https://placehold.co/300x200/E0E0E0/ADADAD?text=حجم كبير');
+                        $(this).val('');
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        imagePreview.attr('src', e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    const originalImageUrl = '@(!string.IsNullOrEmpty(Model.ImageUrl) ? Model.ImageUrl : "https://placehold.co/300x200/E0E0E0/ADADAD?text=لا توجد صورة")';
+                    imagePreview.attr('src', originalImageUrl);
+                }
+            });
+        });
+    </script>
 }

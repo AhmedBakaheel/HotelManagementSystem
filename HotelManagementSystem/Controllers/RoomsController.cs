@@ -1,23 +1,28 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using HotelManagementSystem.Data; 
-using HotelManagementSystem.Models; 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
-using HotelManagementSystem.Enums;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using HotelManagementSystem.Extensions;
+using HotelManagementSystem.Data;
+using HotelManagementSystem.Models;
+using HotelManagementSystem.Enums; 
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using System.IO;
+using Microsoft.AspNetCore.Hosting;
+using System;
 
 namespace HotelManagementSystem.Controllers
 {
-    //[Authorize(Roles = "Receptionist")]
     public class RoomsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _hostEnvironment;
 
-        public RoomsController(ApplicationDbContext context)
+        public RoomsController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
+            _hostEnvironment = hostEnvironment;
         }
+
         // GET: Rooms
         public async Task<IActionResult> Index()
         {
@@ -33,46 +38,70 @@ namespace HotelManagementSystem.Controllers
             }
 
             var room = await _context.Rooms
-                .FirstOrDefaultAsync(m => m.Id == id); 
+                .FirstOrDefaultAsync(m => m.Id == id);
             if (room == null)
             {
-                return NotFound(); 
+                return NotFound();
             }
 
-            return View(room); 
+            return View(room);
         }
 
         // GET: Rooms/Create
         public IActionResult Create()
         {
-            var room = new Room();
-            room.RoomTypeOptions = Enum.GetValues(typeof(RoomType))
-                             .Cast<RoomType>()
-                             .Select(e => new SelectListItem
-                             {
-                                 Value = e.ToString(),
-                                 Text = e.GetDisplayName() 
-                             });
-            return View(room);
+            return View();
         }
 
+        // POST: Rooms/Create
         [HttpPost]
-        [ValidateAntiForgeryToken] 
-        public async Task<IActionResult> Create( Room room)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create([Bind("Id,RoomType,PricePerNight,Description,MaxGuests,IsActive")] Room room, IFormFile RoomImageFile)
         {
+            // توليد رقم الغرفة تلقائياً
+            var lastRoom = await _context.Rooms
+                                         .OrderByDescending(r => r.Id)
+                                         .FirstOrDefaultAsync();
+
+            int nextRoomNumber = 1;
+            if (lastRoom != null && int.TryParse(lastRoom.RoomNumber, out int lastNum))
+            {
+                nextRoomNumber = lastNum + 1;
+            }
+            room.RoomNumber = nextRoomNumber.ToString();
+
+            if (RoomImageFile != null && RoomImageFile.Length > 0)
+            {
+                string wwwRootPath = _hostEnvironment.WebRootPath;
+                string uploadsFolder = Path.Combine(wwwRootPath, "images", "rooms");
+
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                string fileName = Path.GetFileNameWithoutExtension(RoomImageFile.FileName);
+                string extension = Path.GetExtension(RoomImageFile.FileName);
+                string uniqueFileName = fileName + DateTime.Now.ToString("yymmssfff") + extension;
+                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await RoomImageFile.CopyToAsync(fileStream);
+                }
+                room.ImageUrl = Path.Combine("/images/rooms/", uniqueFileName).Replace("\\", "/");
+            }
+            else
+            {
+                room.ImageUrl = null;
+            }
+
             if (ModelState.IsValid)
             {
                 _context.Add(room);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
-            }            
-            room.RoomTypeOptions = Enum.GetValues(typeof(RoomType))
-                                       .Cast<RoomType>()
-                                       .Select(e => new SelectListItem
-                                       {
-                                           Value = e.ToString(),
-                                           Text = e.GetDisplayName()
-                                       });
+            }
             return View(room);
         }
 
@@ -89,28 +118,59 @@ namespace HotelManagementSystem.Controllers
             {
                 return NotFound();
             }
-
-            // تهيئة RoomTypeOptions هنا أيضاً لـ Edit View
-            room.RoomTypeOptions = Enum.GetValues(typeof(RoomType))
-                                       .Cast<RoomType>()
-                                       .Select(e => new SelectListItem
-                                       {
-                                           Value = e.ToString(),
-                                           Text = e.GetDisplayName(),
-                                           Selected = e == room.RoomType 
-                                       });
-
             return View(room);
         }
 
-       
+        // POST: Rooms/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,RoomNumber,RoomType,PricePerNight,IsAvailable,Description")] Room room)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,RoomType,PricePerNight,Description,MaxGuests,IsActive")] Room room, IFormFile RoomImageFile)
         {
             if (id != room.Id)
             {
                 return NotFound();
+            }
+
+            var existingRoom = await _context.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id);
+            if (existingRoom == null)
+            {
+                return NotFound();
+            }
+            room.RoomNumber = existingRoom.RoomNumber;
+
+            if (RoomImageFile != null && RoomImageFile.Length > 0)
+            {
+                if (!string.IsNullOrEmpty(existingRoom.ImageUrl))
+                {
+                    string oldImagePath = Path.Combine(_hostEnvironment.WebRootPath, existingRoom.ImageUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(oldImagePath))
+                    {
+                        System.IO.File.Delete(oldImagePath);
+                    }
+                }
+
+                string wwwRootPath = _hostEnvironment.WebRootPath;
+                string uploadsFolder = Path.Combine(wwwRootPath, "images", "rooms");
+
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                string fileName = Path.GetFileNameWithoutExtension(RoomImageFile.FileName);
+                string extension = Path.GetExtension(RoomImageFile.FileName);
+                string uniqueFileName = fileName + DateTime.Now.ToString("yymmssfff") + extension;
+                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await RoomImageFile.CopyToAsync(fileStream);
+                }
+                room.ImageUrl = Path.Combine("/images/rooms/", uniqueFileName).Replace("\\", "/");
+            }
+            else
+            {
+                room.ImageUrl = existingRoom.ImageUrl;
             }
 
             if (ModelState.IsValid)
@@ -132,19 +192,9 @@ namespace HotelManagementSystem.Controllers
                     }
                 }
                 return RedirectToAction(nameof(Index));
-            }           
-            room.RoomTypeOptions = Enum.GetValues(typeof(RoomType))
-                                       .Cast<RoomType>()
-                                       .Select(e => new SelectListItem
-                                       {
-                                           Value = e.ToString(),
-                                           Text = e.GetDisplayName(),
-                                           Selected = e == room.RoomType
-                                       });
+            }
             return View(room);
         }
-
-
 
         // GET: Rooms/Delete/5
         public async Task<IActionResult> Delete(int? id)
@@ -161,26 +211,35 @@ namespace HotelManagementSystem.Controllers
                 return NotFound();
             }
 
-            return View(room); 
+            return View(room);
         }
 
         // POST: Rooms/Delete/5
-        [HttpPost, ActionName("Delete")] 
+        [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var room = await _context.Rooms.FindAsync(id);
             if (room != null)
             {
-                _context.Rooms.Remove(room); 
-                await _context.SaveChangesAsync(); 
+                if (!string.IsNullOrEmpty(room.ImageUrl))
+                {
+                    string imagePath = Path.Combine(_hostEnvironment.WebRootPath, room.ImageUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(imagePath))
+                    {
+                        System.IO.File.Delete(imagePath);
+                    }
+                }
+                _context.Rooms.Remove(room);
             }
 
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+
         private bool RoomExists(int id)
         {
-            return _context.Rooms.Any(e => e.Id == id); 
+            return _context.Rooms.Any(e => e.Id == id);
         }
     }
 }

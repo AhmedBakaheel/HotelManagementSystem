@@ -15,7 +15,7 @@ namespace HotelManagementSystem.Controllers
     public class OnlineBookingController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager; // سنحتاجه لربط الحجز بالمستخدم
+        private readonly UserManager<ApplicationUser> _userManager; 
 
         public OnlineBookingController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {

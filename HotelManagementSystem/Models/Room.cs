@@ -1,7 +1,8 @@
-﻿using HotelManagementSystem.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Collections.Generic;
+using HotelManagementSystem.Enums; 
+
 namespace HotelManagementSystem.Models
 {
     public class Room
@@ -9,34 +10,43 @@ namespace HotelManagementSystem.Models
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "رقم الغرفة مطلوب.")]
+       
         [Display(Name = "رقم الغرفة")]
-        public string RoomNumber { get; set; }
+        [StringLength(10, ErrorMessage = "رقم الغرفة لا يمكن أن يتجاوز 10 أحرف.")]
+        public string RoomNumber { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "نوع الغرفة مطلوب.")]
         [Display(Name = "نوع الغرفة")]
+       
         public RoomType RoomType { get; set; }
 
-        [Required(ErrorMessage = "السعر الليلي مطلوب.")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "السعر الليلي يجب أن يكون أكبر من صفر.")]
-        [Display(Name = "السعر الليلي")]
+        [Required(ErrorMessage = "سعر الليلة الواحدة مطلوب.")]
+        [Display(Name = "سعر الليلة")]
         [Column(TypeName = "decimal(18, 2)")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "سعر الليلة يجب أن يكون أكبر من صفر.")]
         public decimal PricePerNight { get; set; }
 
-        // <== استخدم هذه الخاصية بدلاً من IsAvailable (إذا كنت تريد RoomStatus)
         [Required(ErrorMessage = "حالة الغرفة مطلوبة.")]
         [Display(Name = "الحالة")]
-        public RoomStatus Status { get; set; } // <== هذه هي الخاصية التي يجب أن تستخدم الـ enum
-
+        public RoomStatus Status { get; set; }
         [Display(Name = "الوصف")]
         [StringLength(500, ErrorMessage = "الوصف لا يمكن أن يتجاوز 500 حرف.")]
         public string? Description { get; set; }
-        [Display(Name = "نشطة")] 
+
+        [Display(Name = "الحد الأقصى للضيوف")]
+        [Range(1, 10, ErrorMessage = "الحد الأقصى للضيوف يجب أن يكون بين 1 و 10.")]
+        public int MaxGuests { get; set; }
+
+        [Display(Name = "نشطة")]
         public bool IsActive { get; set; } = true;
 
-        [NotMapped]
-        public IEnumerable<SelectListItem> RoomTypeOptions { get; set; }
+        [Display(Name = "رابط الصورة")]
+        [StringLength(1000, ErrorMessage = "رابط الصورة لا يمكن أن يتجاوز 1000 حرف.")]
+        [DataType(DataType.ImageUrl)]
+        public string? ImageUrl { get; set; }
 
-        public ICollection<Booking> Bookings { get; set; }
+        // Navigation property for related bookings
+        public virtual ICollection<Booking>? Bookings { get; set; }
     }
 }
+

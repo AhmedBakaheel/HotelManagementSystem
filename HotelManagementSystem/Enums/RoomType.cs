@@ -10,6 +10,8 @@ namespace HotelManagementSystem.Enums
         [Display(Name = "جناح")]
         Suite,
         [Display(Name = "عائلية")]
-        Family 
+        Family ,
+        [Display(Name = "غرفة ديلوكس")] 
+        Deluxe
     }
 }
