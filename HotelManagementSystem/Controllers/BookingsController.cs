@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using HotelManagementSystem.Enums;
+using HotelManagementSystem.Extensions;
 
 namespace HotelManagementSystem.Controllers
 {
@@ -20,13 +21,99 @@ namespace HotelManagementSystem.Controllers
             _context = context;
         }
 
-        // GET: Bookings
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string searchString, BookingStatus? statusFilter, DateTime? checkInDateFrom, DateTime? checkInDateTo, int? roomIdFilter, int? customerIdFilter, int? pageNumber, int? pageSize)
         {
-            var applicationDbContext = _context.Bookings
+            int currentPageSize = pageSize ?? 10;
+            int currentPageNumber = pageNumber ?? 1; 
+
+          
+            ViewData["CurrentSearchString"] = searchString;
+            ViewData["CurrentStatusFilter"] = statusFilter;
+            ViewData["CurrentCheckInDateFrom"] = checkInDateFrom?.ToString("yyyy-MM-dd");
+            ViewData["CurrentCheckInDateTo"] = checkInDateTo?.ToString("yyyy-MM-dd");
+            ViewData["CurrentRoomIdFilter"] = roomIdFilter; 
+            ViewData["CurrentCustomerIdFilter"] = customerIdFilter; 
+            ViewData["CurrentPageSize"] = currentPageSize; 
+
+          
+            var statusOptions = Enum.GetValues(typeof(BookingStatus))
+                                    .Cast<BookingStatus>()
+                                    .Select(e => new { Value = e.ToString(), Text = e.GetDisplayName() })
+                                    .ToList();
+            statusOptions.Insert(0, new { Value = "", Text = "-- الكل --" });
+            ViewBag.BookingStatusOptions = new SelectList(statusOptions, "Value", "Text", statusFilter?.ToString());
+
+           
+            var pageSizeOptions = new List<SelectListItem>
+            {
+                new SelectListItem { Value = "5", Text = "5", Selected = (currentPageSize == 5) },
+                new SelectListItem { Value = "10", Text = "10", Selected = (currentPageSize == 10) },
+                new SelectListItem { Value = "20", Text = "20", Selected = (currentPageSize == 20) },
+                new SelectListItem { Value = "50", Text = "50", Selected = (currentPageSize == 50) }
+            };
+            ViewBag.PageSizeOptions = pageSizeOptions;
+
+            // <== جديد: تعبئة قائمة الغرف المنسدلة
+            ViewBag.Rooms = new SelectList(_context.Rooms.Where(r => r.IsActive), "Id", "RoomNumber", roomIdFilter);
+            // <== جديد: تعبئة قائمة العملاء المنسدلة
+            ViewBag.Customers = new SelectList(_context.Customers, "Id", "FullName", customerIdFilter);
+
+
+            // Start building the query
+            var bookings = _context.Bookings
                 .Include(b => b.Room)
-                .Include(b => b.Customer);
-            return View(await applicationDbContext.ToListAsync());
+                .Include(b => b.Customer)
+                .AsQueryable();
+
+            // Apply search string filter (RoomNumber or Customer FullName)
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                bookings = bookings.Where(b => b.Room.RoomNumber.Contains(searchString) ||
+                                               b.Customer.FullName.Contains(searchString));
+            }
+
+            // Apply status filter
+            if (statusFilter.HasValue)
+            {
+                bookings = bookings.Where(b => b.Status == statusFilter.Value);
+            }
+
+            // Apply CheckInDate from filter
+            if (checkInDateFrom.HasValue)
+            {
+                bookings = bookings.Where(b => b.CheckInDate >= checkInDateFrom.Value.Date);
+            }
+
+            // Apply CheckInDate to filter (include the entire day)
+            if (checkInDateTo.HasValue)
+            {
+                var adjustedCheckInDateTo = checkInDateTo.Value.Date.AddDays(1).AddTicks(-1);
+                bookings = bookings.Where(b => b.CheckInDate <= adjustedCheckInDateTo);
+            }
+
+            // <== جديد: تطبيق فلتر الغرفة
+            if (roomIdFilter.HasValue)
+            {
+                bookings = bookings.Where(b => b.RoomId == roomIdFilter.Value);
+            }
+
+            // <== جديد: تطبيق فلتر العميل
+            if (customerIdFilter.HasValue)
+            {
+                bookings = bookings.Where(b => b.CustomerId == customerIdFilter.Value);
+            }
+
+            // Pagination logic
+            var totalItems = await bookings.CountAsync();
+            ViewData["TotalItems"] = totalItems;
+            ViewData["CurrentPageNumber"] = currentPageNumber;
+            ViewData["TotalPages"] = (int)Math.Ceiling(totalItems / (double)currentPageSize);
+
+            bookings = bookings.OrderBy(b => b.CheckInDate) // Order by CheckInDate for consistent pagination
+                               .Skip((currentPageNumber - 1) * currentPageSize)
+                               .Take(currentPageSize);
+
+            return View(await bookings.ToListAsync());
         }
 
         // GET: Bookings/Details/5
@@ -271,7 +358,6 @@ namespace HotelManagementSystem.Controllers
         }
 
         // GET: Bookings/CheckIn/5
-        // Displays the confirmation page for checking in a booking
         public async Task<IActionResult> CheckIn(int? id)
         {
             if (id == null)
@@ -289,7 +375,6 @@ namespace HotelManagementSystem.Controllers
                 return NotFound();
             }
 
-            // Prevent check-in if already checked in, checked out, or cancelled
             if (booking.Status == BookingStatus.CheckedIn || booking.Status == BookingStatus.CheckedOut || booking.Status == BookingStatus.Cancelled)
             {
                 TempData["ErrorMessage"] = "Cannot check in a booking that has already been checked in, checked out, or cancelled.";
@@ -300,7 +385,6 @@ namespace HotelManagementSystem.Controllers
         }
 
         // POST: Bookings/CheckInConfirmed/5
-        // Updates booking status to CheckedIn
         [HttpPost, ActionName("CheckIn")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CheckInConfirmed(int id)
@@ -312,14 +396,13 @@ namespace HotelManagementSystem.Controllers
                 return NotFound();
             }
 
-            // Re-check status before updating
             if (booking.Status == BookingStatus.CheckedIn || booking.Status == BookingStatus.CheckedOut || booking.Status == BookingStatus.Cancelled)
             {
                 TempData["ErrorMessage"] = "Cannot check in a booking that has already been checked in, checked out, or cancelled.";
                 return RedirectToAction(nameof(Details), new { id = booking.Id });
             }
 
-            booking.Status = BookingStatus.CheckedIn; // Update status to CheckedIn
+            booking.Status = BookingStatus.CheckedIn;
             _context.Update(booking);
             await _context.SaveChangesAsync();
 
@@ -328,7 +411,6 @@ namespace HotelManagementSystem.Controllers
         }
 
         // GET: Bookings/CheckOut/5
-        // Displays the confirmation page for checking out a booking
         public async Task<IActionResult> CheckOut(int? id)
         {
             if (id == null)
@@ -346,7 +428,6 @@ namespace HotelManagementSystem.Controllers
                 return NotFound();
             }
 
-            // Prevent check-out if not checked in, already checked out, or cancelled
             if (booking.Status != BookingStatus.CheckedIn || booking.Status == BookingStatus.CheckedOut || booking.Status == BookingStatus.Cancelled)
             {
                 TempData["ErrorMessage"] = "Cannot check out a booking that is not checked in, or already checked out/cancelled.";
@@ -357,7 +438,6 @@ namespace HotelManagementSystem.Controllers
         }
 
         // POST: Bookings/CheckOutConfirmed/5
-        // Updates booking status to CheckedOut
         [HttpPost, ActionName("CheckOut")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CheckOutConfirmed(int id)
@@ -369,19 +449,18 @@ namespace HotelManagementSystem.Controllers
                 return NotFound();
             }
 
-            // Re-check status before updating
             if (booking.Status != BookingStatus.CheckedIn || booking.Status == BookingStatus.CheckedOut || booking.Status == BookingStatus.Cancelled)
             {
                 TempData["ErrorMessage"] = "Cannot check out a booking that is not checked in, or already checked out/cancelled.";
                 return RedirectToAction(nameof(Details), new { id = booking.Id });
             }
 
-            booking.Status = BookingStatus.CheckedOut; // Update status to CheckedOut
+            booking.Status = BookingStatus.CheckedOut;
             _context.Update(booking);
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Booking checked out successfully.";
-            return RedirectToAction(nameof(Index)); // Redirect to Index after checkout
+            return RedirectToAction(nameof(Index));
         }
 
 

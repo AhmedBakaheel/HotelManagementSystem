@@ -1,10 +1,24 @@
 ﻿@model IEnumerable<HotelManagementSystem.Models.Booking>
 @using HotelManagementSystem.Enums
 @using HotelManagementSystem.Models
-@using HotelManagementSystem.Extensions
+@using HotelManagementSystem.Extensions 
+@using Microsoft.AspNetCore.Mvc.Rendering 
 
 @{
     ViewData["Title"] = "الحجوزات";
+    var currentPageNumber = (int)ViewData["CurrentPageNumber"];
+    var totalPages = (int)ViewData["TotalPages"];
+    var currentSearchString = (string)ViewData["CurrentSearchString"];
+    var currentStatusFilter = (BookingStatus?)ViewData["CurrentStatusFilter"];
+    var currentCheckInDateFrom = (string)ViewData["CurrentCheckInDateFrom"];
+    var currentCheckInDateTo = (string)ViewData["CurrentCheckInDateTo"];
+    var currentRoomIdFilter = (int?)ViewData["CurrentRoomIdFilter"];
+    var currentCustomerIdFilter = (int?)ViewData["CurrentCustomerIdFilter"];
+
+    var currentPageSize = (ViewData["CurrentPageSize"] as int?) ?? 10;
+
+    var prevDisabled = currentPageNumber <= 1 ? "disabled" : "";
+    var nextDisabled = currentPageNumber >= totalPages ? "disabled" : "";
 }
 
 <h1>الحجوزات</h1>
@@ -12,73 +26,198 @@
 <p>
     <a asp-action="Create">إنشاء حجز جديد</a>
 </p>
+
+<form asp-action="Index" method="get" class="mb-4 p-3 border rounded bg-light">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
+                <label for="searchString" class="control-label">البحث (رقم الغرفة أو اسم العميل):</label>
+                <input type="text" name="searchString" class="form-control" value="@currentSearchString" />
+            </div>
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">بحث</button>
+            <a asp-action="Index" class="btn btn-secondary ms-2">إعادة تعيين البحث</a>
+        </div>
+    </div>
+</form>
+<form asp-action="Index" method="get" class="mb-4 p-3 border rounded bg-light">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="roomIdFilter" class="control-label">الغرفة:</label>
+                <select name="roomIdFilter" class="form-control" asp-items="@ViewBag.Rooms">
+                    <option value="">-- كل الغرف --</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="customerIdFilter" class="control-label">العميل:</label>
+                <select name="customerIdFilter" class="form-control" asp-items="@ViewBag.Customers">
+                    <option value="">-- كل العملاء --</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="statusFilter" class="control-label">حالة الحجز:</label>
+                <select name="statusFilter" class="form-control" asp-items="@ViewBag.BookingStatusOptions">
+                  
+                </select>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="checkInDateFrom" class="control-label">تاريخ الدخول من:</label>
+                <input type="date" name="checkInDateFrom" class="form-control" value="@currentCheckInDateFrom" />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="checkInDateTo" class="control-label">تاريخ الدخول إلى:</label>
+                <input type="date" name="checkInDateTo" class="form-control" value="@currentCheckInDateTo" />
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label for="pageSize" class="control-label">عدد العناصر في الصفحة:</label>
+                <select name="pageSize" class="form-control" asp-items="@ViewBag.PageSizeOptions">
+                  
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="form-group mt-3">
+        <button type="submit" class="btn btn-info">فلترة</button>
+        <a asp-action="Index" class="btn btn-secondary">إعادة تعيين الفلاتر</a>
+    </div>
+</form>
 <table class="table">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.CheckInDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CheckOutDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Status)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Room)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Customer)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Notes)
-            </th>
+            <th>تاريخ الدخول</th>
+            <th>تاريخ الخروج</th>
+            <th>حالة الحجز</th>
+            <th>الغرفة</th>
+            <th>العميل</th>
+            <th>ملاحظات الحجز</th>
+            <th>المبلغ الإجمالي</th>
+            <th>تاريخ الحجز</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
+        @if (Model.Any())
+        {
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CheckInDate)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CheckOutDate)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Status)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Room.RoomNumber)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Customer.FullName)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Notes)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.TotalAmount)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.BookingDate)
+                    </td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a> |
+                        <a asp-action="Details" asp-route-id="@item.Id">تفاصيل</a> |
+                        <a asp-action="Delete" asp-route-id="@item.Id">حذف</a>
+                        @if (item.Status == BookingStatus.Pending || item.Status == BookingStatus.Confirmed)
+                        {
+                            <span> | </span>
+                            <a asp-action="CheckIn" asp-route-id="@item.Id" class="text-success">تسجيل الدخول</a>
+                        }
+                        @if (item.Status == BookingStatus.CheckedIn)
+                        {
+                            <span> | </span>
+                            <a asp-action="CheckOut" asp-route-id="@item.Id" class="text-primary">تسجيل المغادرة</a>
+                        }
+                        @if (item.Status != BookingStatus.Cancelled && item.Status != BookingStatus.CheckedOut)
+                        {
+                            <span> | </span>
+                            <a asp-action="Cancel" asp-route-id="@item.Id" class="text-danger">إلغاء</a>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+        else
         {
             <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CheckInDate)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CheckOutDate)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Status)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Room.RoomNumber)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Customer.FullName)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Notes)
-                </td>
-                <td>
-                    <a asp-action="Edit" asp-route-id="@item.Id">تعديل</a> |
-                    <a asp-action="Details" asp-route-id="@item.Id">تفاصيل</a> |
-                    <a asp-action="Delete" asp-route-id="@item.Id">حذف</a>
-                    @if (item.Status == BookingStatus.Pending || item.Status == BookingStatus.Confirmed)
-                    {
-                        <span> | </span>
-                        <a asp-action="CheckIn" asp-route-id="@item.Id" class="text-success">تسجيل الدخول</a>
-                    }
-                    @if (item.Status == BookingStatus.CheckedIn)
-                    {
-                        <span> | </span>
-                        <a asp-action="CheckOut" asp-route-id="@item.Id" class="text-primary">تسجيل المغادرة</a>
-                    }
-                    @if (item.Status != BookingStatus.Cancelled && item.Status != BookingStatus.CheckedOut)
-                    {
-                        <span> | </span>
-                        <a asp-action="Cancel" asp-route-id="@item.Id" class="text-danger">إلغاء</a>
-                    }
+                <td colspan="9" class="text-center text-muted py-4">
+                    لا توجد حجوزات مطابقة لمعايير البحث والتصفية.
                 </td>
             </tr>
         }
     </tbody>
 </table>
+@{
+    var totalItems = (int)ViewData["TotalItems"];
+}
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <div class="pagination-info">
+        عرض @Model.Count() من @totalItems عنصر
+    </div>
+    <ul class="pagination">
+        <li class="page-item @prevDisabled">
+            <a asp-action="Index"
+               asp-route-pageNumber="@(currentPageNumber - 1)"
+               asp-route-pageSize="@currentPageSize"
+               asp-route-searchString="@currentSearchString"
+               asp-route-statusFilter="@currentStatusFilter"
+               asp-route-checkInDateFrom="@currentCheckInDateFrom"
+               asp-route-checkInDateTo="@currentCheckInDateTo"
+               asp-route-roomIdFilter="@currentRoomIdFilter"
+               asp-route-customerIdFilter="@currentCustomerIdFilter"
+               class="page-link">السابق</a>
+        </li>
+
+        @for (int i = 1; i <= totalPages; i++)
+        {
+            <li class="page-item @(i == currentPageNumber ? "active" : "")">
+                <a asp-action="Index"
+                   asp-route-pageNumber="@i"
+                   asp-route-pageSize="@currentPageSize"
+                   asp-route-searchString="@currentSearchString"
+                   asp-route-statusFilter="@currentStatusFilter"
+                   asp-route-checkInDateFrom="@currentCheckInDateFrom"
+                   asp-route-checkInDateTo="@currentCheckInDateTo"
+                   asp-route-roomIdFilter="@currentRoomIdFilter"
+                   asp-route-customerIdFilter="@currentCustomerIdFilter"
+                   class="page-link">@i</a>
+            </li>
+        }
+
+        <li class="page-item @nextDisabled">
+            <a asp-action="Index"
+               asp-route-pageNumber="@(currentPageNumber + 1)"
+               asp-route-pageSize="@currentPageSize"
+               asp-route-searchString="@currentSearchString"
+               asp-route-statusFilter="@currentStatusFilter"
+               asp-route-checkInDateFrom="@currentCheckInDateFrom"
+               asp-route-checkInDateTo="@currentCheckInDateTo"
+               asp-route-roomIdFilter="@currentRoomIdFilter"
+               asp-route-customerIdFilter="@currentCustomerIdFilter"
+               class="page-link">التالي</a>
+        </li>
+    </ul>
+</div>
